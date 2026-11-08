@@ -135,6 +135,7 @@ export type PlayerState = {
       }[];
       loans: {
         id: string;
+        category?: "personal" | "business" | "real-estate";
         principal: number;
         interestRate: number;
         remaining: number;
@@ -233,7 +234,7 @@ export type BankAction =
   | { type: "registerBank"; bankId: string }
   | { type: "deposit"; bankId: string; amount: number }
   | { type: "withdraw"; bankId: string; amount: number }
-  | { type: "applyLoan"; bankId: string; amount: number }
+  | { type: "applyLoan"; bankId: string; amount: number; category?: "personal" | "business" | "real-estate" }
   | { type: "repayLoan"; bankId: string; loanId: string; amount: number }
   | { type: "linkBusinessIncome"; inst: string; bankId: string | null }
   | { type: "linkPropertyIncome"; inst: string; bankId: string | null }
