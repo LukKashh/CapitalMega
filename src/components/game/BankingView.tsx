@@ -14,7 +14,6 @@ import {
   type BankCategory,
 } from "@/game/banking";
 import { money } from "@/lib/format";
-import { BALANCE } from "@/game/config";
 import {
   CreditCard,
   Landmark,
