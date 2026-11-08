@@ -64,17 +64,18 @@ export function BankingView() {
         const bank = BANK_BY_ID[account.defId];
         const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
         const dailyRate = loan.interestRate || (bank?.loanApr ?? 0) / 365;
+        const existingInterest =
+          loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
+        const principalRemaining =
+          loan.principalRemaining ?? Math.max(0, loan.remaining - existingInterest);
+        const projectedInterest = loan.remaining * (Math.pow(1 + dailyRate, elapsedDays) - 1);
         return {
           ...loan,
           bankId,
           bankName: bank?.name ?? bankId,
-          currentRemaining: loan.remaining * Math.pow(1 + dailyRate, elapsedDays),
-          currentAccruedInterest:
-            (loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal)) +
-            loan.remaining * (Math.pow(1 + dailyRate, elapsedDays) - 1),
-          currentPrincipalRemaining:
-            loan.principalRemaining ??
-            Math.max(0, loan.remaining - (loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal)),),
+          currentRemaining: loan.remaining + projectedInterest,
+          currentAccruedInterest: existingInterest + projectedInterest,
+          currentPrincipalRemaining: principalRemaining,
         };
       }),
   );
@@ -313,6 +314,7 @@ export function BankingView() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-black text-sm text-foreground">{bankDef.name}</span>
+                          <Pill tone="gain" className="text-[8px] uppercase font-bold py-0">Active</Pill>
                           <Pill tone="neutral" className="text-[9px] uppercase font-bold py-0">
                             {bankDef.category}
                           </Pill>
