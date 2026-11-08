@@ -32,6 +32,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function bankBrand(bankId: string) {
+  const bankNumber = Number(bankId.split("-")[1]) || 1;
+  const hue = (bankNumber * 47 + 185) % 360;
+  return {
+    accent: `hsl(${hue} 72% 58%)`,
+    soft: `hsl(${hue} 72% 58% / 0.12)`,
+    border: `hsl(${hue} 72% 58% / 0.42)`,
+  };
+}
+
 export function BankingView() {
   const { data } = useGame();
   const { run, pending } = useAct();
@@ -79,6 +89,7 @@ export function BankingView() {
     const bank = BANK_BY_ID[registering];
     if (!bank) return null;
     const estCredit = calculateBankCreditLimit(bank, s, now);
+    const brand = bankBrand(bank.id);
     const existingAccount = accounts[bank.id];
     const canRegister =
       !existingAccount &&
@@ -97,8 +108,11 @@ export function BankingView() {
         </Button>
         <Card className="border-primary/40 bg-card/95 backdrop-blur-md space-y-4 p-5 shadow-2xl">
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/15 border border-primary/40 flex items-center justify-center shrink-0">
-              <Landmark className="h-7 w-7 text-primary" />
+            <div
+              className="h-14 w-14 rounded-2xl border flex items-center justify-center shrink-0 text-lg font-black"
+              style={{ color: brand.accent, backgroundColor: brand.soft, borderColor: brand.border }}
+            >
+              {bank.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -247,6 +261,7 @@ export function BankingView() {
               const acc = accounts[bankId];
               const bankDef = BANK_BY_ID[bankId];
               if (!acc || !bankDef) return null;
+              const brand = bankBrand(bankId);
               const isSelected = activeAccountTab === bankId;
               const parsedAmt = parseFloat(amountInput) || 0;
               const parsedLoanAmt = parseFloat(loanAmountInput) || 0;
@@ -355,9 +370,10 @@ export function BankingView() {
                         className={cn(
                           "rounded-md px-1 py-2 text-[9px] font-bold uppercase tracking-wide transition-colors",
                           bankAppTab === tab
-                            ? "bg-primary/15 text-primary border border-primary/30"
+                            ? "border"
                             : "text-muted-foreground hover:bg-muted",
                         )}
+                        style={bankAppTab === tab ? { color: brand.accent, backgroundColor: brand.soft, borderColor: brand.border } : undefined}
                       >
                         {label}
                       </button>
