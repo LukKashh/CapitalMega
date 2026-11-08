@@ -1737,6 +1737,7 @@ function applyBank(c: Ctx, a: BankAction) {
       const dailyRate = bankDef.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate;
       acc.loans.push({
         id: crypto.randomUUID(),
+        category: a.category ?? "personal",
         principal: a.amount,
         interestRate: dailyRate,
         remaining: a.amount,
