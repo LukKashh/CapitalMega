@@ -1,0 +1,11 @@
+{
+  "name": "Remix Remix Capitalfortune",
+  "description": "Create and Manage your own Capitalist Empire. Earn, build, upgrade and invest all to reach the Top.",
+  "version": "1.0.0",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

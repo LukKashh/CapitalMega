@@ -1,0 +1,97 @@
+{
+  "package": "Business & Property Texture Sheets",
+  "assets": [
+    {
+      "file": "01_business_facilities_texture_sheet.png",
+      "dimensions_px": [1152, 1536],
+      "color_mode": "RGB",
+      "layout": "2 columns x 5 rows",
+      "assets": [
+        {
+          "name": "Lemonade Stand",
+          "row": 1,
+          "column": 1
+        },
+        {
+          "name": "Café",
+          "row": 1,
+          "column": 2
+        },
+        {
+          "name": "Retail Shop",
+          "row": 2,
+          "column": 1
+        },
+        {
+          "name": "Supermarket",
+          "row": 2,
+          "column": 2
+        },
+        {
+          "name": "Office Building",
+          "row": 3,
+          "column": 1
+        },
+        {
+          "name": "Factory",
+          "row": 3,
+          "column": 2
+        },
+        {
+          "name": "Warehouse",
+          "row": 4,
+          "column": 1
+        },
+        {
+          "name": "Refinery",
+          "row": 4,
+          "column": 2
+        },
+        {
+          "name": "Mine",
+          "row": 5,
+          "column": 1
+        },
+        {
+          "name": "Farm",
+          "row": 5,
+          "column": 2
+        }
+      ]
+    },
+    {
+      "file": "02_real_estate_properties_texture_sheet.png",
+      "dimensions_px": [1536, 1024],
+      "color_mode": "RGBA",
+      "layout": "3 cards on top row, 2 cards on bottom row",
+      "assets": [
+        {
+          "name": "Residential",
+          "position": "top-left"
+        },
+        {
+          "name": "Apartment",
+          "position": "top-center"
+        },
+        {
+          "name": "Office Building (Property)",
+          "position": "top-right"
+        },
+        {
+          "name": "Shopping Mall",
+          "position": "bottom-left"
+        },
+        {
+          "name": "Hotel",
+          "position": "bottom-right"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Source sheets are preserved unchanged.",
+    "Crop individual cards using visible card boundaries.",
+    "Preserve aspect ratio and the RGBA alpha channel on the property sheet.",
+    "The business facilities sheet has an RGB checkerboard background."
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "format": "horizontal_sprite_sheet",
+  "frames_per_sheet": 3,
+  "frame_order": ["I", "II", "III"],
+  "frame_selection": "divide image width into three equal regions; use full image height",
+  "image_format": "PNG RGBA",
+  "tiers": [
+    {
+      "tier": 1,
+      "name": "Stone",
+      "file": "01_stone_tier.png",
+      "levels": {
+        "I": "1-2",
+        "II": "3-5",
+        "III": "6-9"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "Bronze",
+      "file": "02_bronze_tier.png",
+      "levels": {
+        "I": "10-13",
+        "II": "14-17",
+        "III": "18-22"
+      }
+    },
+    {
+      "tier": 3,
+      "name": "Iron",
+      "file": "03_iron_tier.png",
+      "levels": {
+        "I": "23-28",
+        "II": "29-34",
+        "III": "35-40"
+      }
+    },
+    {
+      "tier": 4,
+      "name": "Silver",
+      "file": "04_silver_tier.png",
+      "levels": null,
+      "note": "User specified an extra 5 levels per sublevel; exact ranges need confirmation."
+    },
+    {
+      "tier": 5,
+      "name": null,
+      "file": "05_unassigned_tier.png",
+      "levels": null,
+      "note": "Tier name and level ranges not supplied."
+    },
+    {
+      "tier": 6,
+      "name": null,
+      "file": "06_unassigned_tier.png",
+      "levels": null,
+      "note": "Tier name and level ranges not supplied."
+    },
+    {
+      "tier": 7,
+      "name": null,
+      "file": "07_unassigned_tier.png",
+      "levels": null,
+      "note": "Tier name and level ranges not supplied."
+    },
+    {
+      "tier": 8,
+      "name": null,
+      "file": "08_unassigned_tier.png",
+      "levels": null,
+      "note": "Tier name and level ranges not supplied."
+    },
+    {
+      "tier": 9,
+      "name": null,
+      "file": "09_unassigned_tier.png",
+      "levels": null,
+      "note": "Tier name and level ranges not supplied."
+    },
+    {
+      "tier": 10,
+      "name": null,
+      "file": "10_unassigned_tier.png",
+      "levels": null,
+      "note": "Tier name and level ranges not supplied."
+    }
+  ]
+}
