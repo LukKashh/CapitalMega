@@ -12,7 +12,6 @@ import {
   supportsBusinessIncome,
   supportsPropertyIncome,
   type BankCategory,
-  type BankDef,
 } from "@/game/banking";
 import { money } from "@/lib/format";
 import { BALANCE } from "@/game/config";
@@ -20,7 +19,6 @@ import {
   Building,
   CreditCard,
   Landmark,
-  ArrowRightLeft,
   CheckCircle2,
   History,
   TrendingUp,
