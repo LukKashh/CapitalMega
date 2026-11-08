@@ -16,7 +16,6 @@ import {
 import { money } from "@/lib/format";
 import { BALANCE } from "@/game/config";
 import {
-  Building,
   CreditCard,
   Landmark,
   CheckCircle2,
@@ -301,14 +300,10 @@ export function BankingView() {
                   >
                     <div className="flex items-center gap-3.5">
                       <div
-                        className={cn(
-                          "h-11 w-11 rounded-xl flex items-center justify-center transition-all shrink-0",
-                          isSelected
-                            ? "bg-primary text-primary-foreground shadow-glow"
-                            : "bg-primary/10 text-primary border border-primary/20",
-                        )}
+                        className="h-11 w-11 rounded-xl flex items-center justify-center transition-all shrink-0 border text-sm font-black"
+                        style={{ color: brand.accent, backgroundColor: brand.soft, borderColor: brand.border }}
                       >
-                        <Building className="h-5 w-5" />
+                        {bankDef.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
