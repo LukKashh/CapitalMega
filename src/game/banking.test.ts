@@ -61,6 +61,89 @@ describe("Banking Feature Logic", () => {
     );
   });
 
+  it("uses consolidated debt when assessing a second bank loan", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    apply(c, { type: "registerBank", bankId: "BNK-003" });
+    apply(c, { type: "applyLoan", bankId: "BNK-001", amount: 20_000 });
+    expect(() => apply(c, { type: "applyLoan", bankId: "BNK-003", amount: 1 })).toThrow(
+      "Loan amount exceeds available credit line",
+    );
+  });
+
+  it("routes collected business and property income into the linked bank account", () => {
+    const s = newPlayer(baseTime, "IncomeTycoon");
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    s.companies.company_1 = {
+      inst: "company_1",
+      defId: "co-001",
+      boughtAt: baseTime,
+      price: 100_000,
+      staff: {},
+      capLevel: 0,
+      branches: 0,
+      upgrades: {},
+      upgradeValue: 0,
+      reserves: 0,
+      liabilities: 0,
+      uncollected: 5_000,
+      suspended: false,
+      autoSuspended: false,
+      revenueTotal: 5_000,
+      expenseTotal: 0,
+      history: [],
+    };
+    s.properties.property_1 = {
+      inst: "property_1",
+      defId: "pr-001",
+      boughtAt: baseTime,
+      price: 100_000,
+      condition: 100,
+      upgrades: {},
+      upgradeValue: 0,
+      rentTotal: 3_000,
+      uncollected: 3_000,
+    };
+
+    apply(c, { type: "linkBusinessIncome", inst: "company_1", bankId: "BNK-001" });
+    apply(c, { type: "linkPropertyIncome", inst: "property_1", bankId: "BNK-001" });
+    apply(c, { type: "collect" });
+    apply(c, { type: "collectRent" });
+
+    expect(s.bankAccounts["BNK-001"].balance).toBe(8_000);
+    expect(s.cash).toBe(0);
+    expect(s.companies.company_1.incomeBankId).toBe("BNK-001");
+    expect(s.properties.property_1.incomeBankId).toBe("BNK-001");
+  });
+
+  it("produces equivalent savings and loan interest after one long tick or many short ticks", () => {
+    const initial = newPlayer(baseTime);
+    initial.cash = 150_000;
+    const initialCtx = createCtx(initial);
+    apply(initialCtx, { type: "registerBank", bankId: "BNK-002" });
+    apply(initialCtx, { type: "deposit", bankId: "BNK-002", amount: 100_000 });
+    apply(initialCtx, { type: "applyLoan", bankId: "BNK-002", amount: 20_000 });
+
+    const oneTick = structuredClone(initial);
+    const manyTicks = structuredClone(initial);
+    const day = 86_400_000;
+    tick(createCtx(oneTick, baseTime + day));
+    for (let hour = 1; hour <= 24; hour++) {
+      tick(createCtx(manyTicks, baseTime + hour * 3_600_000));
+    }
+
+    expect(manyTicks.bankAccounts["BNK-002"].balance).toBeCloseTo(
+      oneTick.bankAccounts["BNK-002"].balance,
+      6,
+    );
+    expect(manyTicks.bankAccounts["BNK-002"].loans[0].remaining).toBeCloseTo(
+      oneTick.bankAccounts["BNK-002"].loans[0].remaining,
+      6,
+    );
+  });
+
   it("should handle cash deposits and withdrawals with balance checks and transaction records", () => {
     const s = newPlayer(baseTime);
     s.cash = 50_000;
