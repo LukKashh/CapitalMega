@@ -167,6 +167,7 @@ describe("Banking Feature Logic", () => {
 
   it("produces equivalent savings and loan interest after one long tick or many short ticks", () => {
     const initial = newPlayer(baseTime);
+    initial.level = 2;
     initial.cash = 150_000;
     const initialCtx = createCtx(initial);
     apply(initialCtx, { type: "registerBank", bankId: "BNK-002" });
@@ -302,6 +303,7 @@ describe("Banking Feature Logic", () => {
 
   it("should accumulate real-time loan interest and deposit savings yield over elapsed time", () => {
     const s = newPlayer(baseTime);
+    s.level = 2;
     s.cash = 150_000;
     const c = createCtx(s);
     checkAchievements(c);
