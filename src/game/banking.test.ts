@@ -328,6 +328,27 @@ describe("Banking Feature Logic", () => {
     expect(acc.balance).toBeGreaterThan(initialBalance);
     // Loan interest should have increased remaining debt
     expect(loan.remaining).toBeGreaterThan(initialDebt);
+    expect(loan.accruedInterest).toBeGreaterThan(0);
+    expect(loan.principalRemaining).toBe(20_000);
+  });
+
+  it("applies repayments to accrued interest before principal", () => {
+    const s = newPlayer(baseTime);
+    s.cash = 10_000;
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    apply(c, { type: "applyLoan", bankId: "BNK-001", amount: 15_000 });
+    const loan = s.bankAccounts["BNK-001"].loans[0];
+
+    c.now = baseTime + 86_400_000;
+    tick(c);
+    const accruedBefore = loan.accruedInterest ?? 0;
+    const principalBefore = loan.principalRemaining ?? 0;
+    expect(accruedBefore).toBeGreaterThan(0);
+
+    apply(c, { type: "repayLoan", bankId: "BNK-001", loanId: loan.id, amount: 5_000 });
+    expect(loan.accruedInterest).toBeCloseTo(0, 6);
+    expect(loan.principalRemaining).toBeCloseTo(principalBefore - (5_000 - accruedBefore), 6);
   });
 
   it("should settle tax liability and reset period income breakdown", () => {
