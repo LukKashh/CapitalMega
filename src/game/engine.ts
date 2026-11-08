@@ -42,7 +42,12 @@ import {
   type OwnedCompany,
   type PlayerState,
 } from "./types";
-import { BANK_BY_ID, calculateBankCreditLimit } from "./banking";
+import {
+  BANK_BY_ID,
+  calculateBankCreditLimit,
+  getTotalActiveDebt,
+  MAX_ACTIVE_BANK_ACCOUNTS,
+} from "./banking";
 
 export type Ctx = {
   s: PlayerState;
@@ -916,11 +921,11 @@ export function tick(c: Ctx) {
     const bankDef = BANK_BY_ID[acc.defId];
     // Daily savings yield compounding on positive balance
     if (acc.balance > 0 && dt > 0) {
-      const savingsDailyRate = (bankDef?.savingsApy ?? 0.025) / 365;
-      const earnedYield = acc.balance * savingsDailyRate * (dt / 86400000);
-      if (earnedYield > 0) {
-        acc.balance += earnedYield;
-      }
+      // Exponential accrual is partition-invariant: one long offline tick and
+      // many short online ticks produce the same result.
+      const annualYield = bankDef?.savingsApy ?? 0.025;
+      const earnedBalance = acc.balance * Math.pow(1 + annualYield, dt / (365 * 86400000));
+      if (earnedBalance > acc.balance) acc.balance = earnedBalance;
     }
     // Real-time interest on active loans
     for (const loan of acc.loans || []) {
@@ -928,8 +933,7 @@ export function tick(c: Ctx) {
         const dailyRate =
           loan.interestRate ||
           (bankDef?.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate);
-        const interest = loan.remaining * dailyRate * (dt / 86400000);
-        loan.remaining += interest;
+        loan.remaining *= Math.pow(1 + dailyRate, dt / 86400000);
       }
     }
   }
@@ -1582,6 +1586,11 @@ function applyBank(c: Ctx, a: BankAction) {
         throw new GameError("Already registered with this institution");
       const bankDef = BANK_BY_ID[a.bankId];
       if (!bankDef) throw new GameError("Unknown banking institution");
+      if (c.s.level < bankDef.tierRequired)
+        throw new GameError(`Requires player level ${bankDef.tierRequired} to open this account`);
+      const activeAccountCount = Object.values(c.s.bankAccounts).length;
+      if (activeAccountCount >= MAX_ACTIVE_BANK_ACCOUNTS)
+        throw new GameError("You can have a maximum of two active bank accounts");
       c.s.bankAccounts[a.bankId] = {
         inst: a.bankId,
         defId: a.bankId,
@@ -1631,9 +1640,9 @@ function applyBank(c: Ctx, a: BankAction) {
       const bankDef = BANK_BY_ID[a.bankId];
       if (!bankDef) throw new GameError("Unknown banking institution");
 
-      const currentDebt = (acc.loans || [])
-        .filter((l) => l.status === "active")
-        .reduce((sum, l) => sum + (l.remaining || 0), 0);
+      // Every institution assesses the same consolidated exposure. Debt at
+      // another bank reduces this bank's remaining lending capacity as well.
+      const currentDebt = getTotalActiveDebt(c.s);
       const creditLimit = calculateBankCreditLimit(bankDef, c.s, c.now);
       const availableCredit = Math.max(0, creditLimit - currentDebt);
 
