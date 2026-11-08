@@ -42,6 +42,156 @@ describe("Banking Feature Logic", () => {
     }).toThrow("Already registered");
   });
 
+  it("enforces a global maximum of two active bank accounts", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    apply(c, { type: "registerBank", bankId: "BNK-003" });
+    expect(() => apply(c, { type: "registerBank", bankId: "BNK-005" })).toThrow(
+      "maximum of two active bank accounts",
+    );
+    expect(Object.keys(s.bankAccounts)).toHaveLength(2);
+  });
+
+  it("enforces each bank's configured player-level account requirement", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    expect(() => apply(c, { type: "registerBank", bankId: "BNK-002" })).toThrow(
+      "Requires player level 2",
+    );
+  });
+
+  it("uses consolidated debt when assessing a second bank loan", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    apply(c, { type: "registerBank", bankId: "BNK-003" });
+    apply(c, { type: "applyLoan", bankId: "BNK-001", amount: 20_000, category: "business" });
+    expect(s.bankAccounts["BNK-001"].loans[0].category).toBe("business");
+    expect(() => apply(c, { type: "applyLoan", bankId: "BNK-003", amount: 1 })).toThrow(
+      "Loan amount exceeds available credit line",
+    );
+  });
+
+  it("routes collected business and property income into the linked bank account", () => {
+    const s = newPlayer(baseTime, "IncomeTycoon");
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    s.companies.company_1 = {
+      inst: "company_1",
+      defId: "lemon",
+      boughtAt: baseTime,
+      price: 100_000,
+      staff: {},
+      capLevel: 0,
+      branches: 0,
+      upgrades: {},
+      upgradeValue: 0,
+      reserves: 0,
+      liabilities: 0,
+      uncollected: 5_000,
+      suspended: false,
+      autoSuspended: false,
+      revenueTotal: 5_000,
+      expenseTotal: 0,
+      history: [],
+    };
+    s.properties.property_1 = {
+      inst: "property_1",
+      defId: "p_studio",
+      boughtAt: baseTime,
+      price: 100_000,
+      condition: 100,
+      upgrades: {},
+      upgradeValue: 0,
+      rentTotal: 3_000,
+      uncollected: 3_000,
+    };
+
+    apply(c, { type: "linkBusinessIncome", inst: "company_1", bankId: "BNK-001" });
+    apply(c, { type: "linkPropertyIncome", inst: "property_1", bankId: "BNK-001" });
+    apply(c, { type: "collect" });
+    apply(c, { type: "collectRent" });
+
+    expect(s.bankAccounts["BNK-001"].balance).toBe(8_000);
+    expect(s.cash).toBe(0);
+    expect(s.companies.company_1.incomeBankId).toBe("BNK-001");
+    expect(s.properties.property_1.incomeBankId).toBe("BNK-001");
+  });
+
+  it("deposits newly generated property income directly into its linked bank", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    s.companies.company_1 = {
+      inst: "company_1",
+      defId: "lemon",
+      boughtAt: baseTime,
+      price: 1_000,
+      staff: { Vendor: 2 },
+      capLevel: 0,
+      branches: 0,
+      upgrades: {},
+      upgradeValue: 0,
+      reserves: 100,
+      liabilities: 0,
+      uncollected: 0,
+      incomeBankId: "BNK-001",
+      suspended: false,
+      autoSuspended: false,
+      revenueTotal: 0,
+      expenseTotal: 0,
+      history: [],
+    };
+    s.properties.property_1 = {
+      inst: "property_1",
+      defId: "p_studio",
+      boughtAt: baseTime,
+      price: 40_000,
+      condition: 100,
+      upgrades: {},
+      upgradeValue: 0,
+      rentTotal: 0,
+      uncollected: 0,
+      incomeBankId: "BNK-001",
+    };
+
+    tick(createCtx(s, baseTime + 3_600_000));
+
+    expect(s.bankAccounts["BNK-001"].balance).toBeGreaterThan(0);
+    expect(s.companies.company_1.uncollected).toBe(0);
+    expect(s.properties.property_1.uncollected).toBe(0);
+    expect(s.stats.rentEarned).toBeGreaterThan(0);
+    expect(s.cash).toBe(0);
+  });
+
+  it("produces equivalent savings and loan interest after one long tick or many short ticks", () => {
+    const initial = newPlayer(baseTime);
+    initial.level = 2;
+    initial.cash = 150_000;
+    const initialCtx = createCtx(initial);
+    apply(initialCtx, { type: "registerBank", bankId: "BNK-002" });
+    apply(initialCtx, { type: "deposit", bankId: "BNK-002", amount: 100_000 });
+    apply(initialCtx, { type: "applyLoan", bankId: "BNK-002", amount: 20_000 });
+
+    const oneTick = structuredClone(initial);
+    const manyTicks = structuredClone(initial);
+    const day = 86_400_000;
+    tick(createCtx(oneTick, baseTime + day));
+    for (let hour = 1; hour <= 24; hour++) {
+      tick(createCtx(manyTicks, baseTime + hour * 3_600_000));
+    }
+
+    expect(manyTicks.bankAccounts["BNK-002"].balance).toBeCloseTo(
+      oneTick.bankAccounts["BNK-002"].balance,
+      6,
+    );
+    expect(manyTicks.bankAccounts["BNK-002"].loans[0].remaining).toBeCloseTo(
+      oneTick.bankAccounts["BNK-002"].loans[0].remaining,
+      6,
+    );
+  });
+
   it("should handle cash deposits and withdrawals with balance checks and transaction records", () => {
     const s = newPlayer(baseTime);
     s.cash = 50_000;
@@ -120,6 +270,7 @@ describe("Banking Feature Logic", () => {
     expect(acc.loans.length).toBe(1);
     const loan = acc.loans[0];
     expect(loan.principal).toBe(15_000);
+    expect(loan.category).toBe("personal");
     expect(loan.remaining).toBe(15_000);
     expect(loan.status).toBe("active");
     expect(getActiveDebt(acc)).toBe(15_000);
@@ -152,6 +303,7 @@ describe("Banking Feature Logic", () => {
 
   it("should accumulate real-time loan interest and deposit savings yield over elapsed time", () => {
     const s = newPlayer(baseTime);
+    s.level = 2;
     s.cash = 150_000;
     const c = createCtx(s);
     checkAchievements(c);
@@ -176,6 +328,27 @@ describe("Banking Feature Logic", () => {
     expect(acc.balance).toBeGreaterThan(initialBalance);
     // Loan interest should have increased remaining debt
     expect(loan.remaining).toBeGreaterThan(initialDebt);
+    expect(loan.accruedInterest).toBeGreaterThan(0);
+    expect(loan.principalRemaining).toBe(20_000);
+  });
+
+  it("applies repayments to accrued interest before principal", () => {
+    const s = newPlayer(baseTime);
+    s.cash = 10_000;
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    apply(c, { type: "applyLoan", bankId: "BNK-001", amount: 15_000 });
+    const loan = s.bankAccounts["BNK-001"].loans[0];
+
+    c.now = baseTime + 86_400_000;
+    tick(c);
+    const accruedBefore = loan.accruedInterest ?? 0;
+    const principalBefore = loan.principalRemaining ?? 0;
+    expect(accruedBefore).toBeGreaterThan(0);
+
+    apply(c, { type: "repayLoan", bankId: "BNK-001", loanId: loan.id, amount: 5_000 });
+    expect(loan.accruedInterest).toBeCloseTo(0, 6);
+    expect(loan.principalRemaining).toBeCloseTo(principalBefore - (5_000 - accruedBefore), 6);
   });
 
   it("should settle tax liability and reset period income breakdown", () => {

@@ -37,6 +37,7 @@ export type OwnedCompany = {
   reserves: number;
   liabilities: number;
   uncollected: number;
+  incomeBankId?: string;
   suspended: boolean;
   autoSuspended: boolean;
   revenueTotal: number;
@@ -101,6 +102,7 @@ export type PlayerState = {
       upgradeValue: number;
       rentTotal: number;
       uncollected?: number;
+      incomeBankId?: string;
     }
   >;
   soldProperties: { name: string; soldAt: number; payout: number }[];
@@ -127,13 +129,16 @@ export type PlayerState = {
       createdAt: number;
       transactions: {
         id: string;
-        type: "deposit" | "withdrawal" | "loan" | "repayment" | "tax";
+        type: "deposit" | "withdrawal" | "loan" | "repayment" | "tax" | "business_income" | "property_income";
         amount: number;
         at: number;
       }[];
       loans: {
         id: string;
+        category?: "personal" | "business" | "real-estate";
         principal: number;
+        principalRemaining?: number;
+        accruedInterest?: number;
         interestRate: number;
         remaining: number;
         nextPayment: number;
@@ -231,8 +236,10 @@ export type BankAction =
   | { type: "registerBank"; bankId: string }
   | { type: "deposit"; bankId: string; amount: number }
   | { type: "withdraw"; bankId: string; amount: number }
-  | { type: "applyLoan"; bankId: string; amount: number }
+  | { type: "applyLoan"; bankId: string; amount: number; category?: "personal" | "business" | "real-estate" }
   | { type: "repayLoan"; bankId: string; loanId: string; amount: number }
+  | { type: "linkBusinessIncome"; inst: string; bankId: string | null }
+  | { type: "linkPropertyIncome"; inst: string; bankId: string | null }
   | { type: "settleTax" };
 
 export class GameError extends Error {}

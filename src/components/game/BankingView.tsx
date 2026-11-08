@@ -7,21 +7,17 @@ import {
   BANKS,
   BANK_BY_ID,
   calculateBankCreditLimit,
-  getActiveDebt,
+  getAvailableBankCredit,
+  MAX_ACTIVE_BANK_ACCOUNTS,
+  supportsBusinessIncome,
+  supportsPropertyIncome,
   type BankCategory,
-  type BankDef,
 } from "@/game/banking";
-import { netWorth } from "@/game/engine";
 import { money } from "@/lib/format";
-import { BALANCE } from "@/game/config";
 import {
-  Building,
   CreditCard,
   Landmark,
-  Receipt,
-  ArrowRightLeft,
   CheckCircle2,
-  AlertTriangle,
   History,
   TrendingUp,
   Wallet,
@@ -34,6 +30,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function bankBrand(bankId: string) {
+  const bankNumber = Number(bankId.split("-")[1]) || 1;
+  const hue = (bankNumber * 47 + 185) % 360;
+  return {
+    accent: `hsl(${hue} 72% 58%)`,
+    soft: `hsl(${hue} 72% 58% / 0.12)`,
+    border: `hsl(${hue} 72% 58% / 0.42)`,
+  };
+}
+
 export function BankingView() {
   const { data } = useGame();
   const { run, pending } = useAct();
@@ -43,59 +49,37 @@ export function BankingView() {
   const [activeAccountTab, setActiveAccountTab] = useState<string | null>(null);
   const [amountInput, setAmountInput] = useState<string>("");
   const [loanAmountInput, setLoanAmountInput] = useState<string>("");
+  const [loanCategoryInput, setLoanCategoryInput] = useState<"personal" | "business" | "real-estate">("personal");
+  const [bankAppTab, setBankAppTab] = useState<"overview" | "payments" | "loans" | "services" | "activity">("overview");
 
   const accounts = useMemo(() => data?.state?.bankAccounts || {}, [data?.state?.bankAccounts]);
-
-  const totalLoanDebt = useMemo(() => {
-    if (!data) return 0;
-    let total = 0;
-    for (const acc of Object.values(accounts)) {
-      const bankDef = BANK_BY_ID[acc.defId];
-      for (const loan of acc.loans || []) {
-        if (loan.status === "active") {
-          const dt = Math.max(0, now - data.state.lastTick);
-          const dailyRate =
-            loan.interestRate ||
-            (bankDef?.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate);
-          const interest = loan.remaining * dailyRate * (dt / 86400000);
-          total += loan.remaining + interest;
-        }
-      }
-    }
-    return total;
-  }, [accounts, now, data]);
-
-  const totalReserves = useMemo(() => {
-    return Object.values(accounts).reduce((acc, a) => acc + (a.balance || 0), 0);
-  }, [accounts]);
-
-  // Total available borrowing power across registered banks
-  const totalAvailableCredit = useMemo(() => {
-    if (!data) return 0;
-    let credit = 0;
-    for (const bankId of Object.keys(accounts)) {
-      const def = BANK_BY_ID[bankId];
-      if (def) {
-        const limit = calculateBankCreditLimit(def, data.state, now);
-        const debt = getActiveDebt(accounts[bankId]);
-        credit += Math.max(0, limit - debt);
-      }
-    }
-    return credit;
-  }, [accounts, data, now]);
 
   if (!data) return null;
   const s = data.state;
   const registeredBankIds = Object.keys(accounts);
-
-  const tax = s.tax || {
-    liability: 0,
-    periodIncome: { business: 0, rental: 0, investment: 0, personal: 0 },
-    lastSettlementAt: s.createdAt,
-  };
-
-  const isWarning = tax.liability >= BALANCE.tax.thresholds.warning;
-  const isDanger = tax.liability >= BALANCE.tax.thresholds.danger;
+  const allActiveLoans = Object.entries(accounts).flatMap(([bankId, account]) =>
+    (account.loans || [])
+      .filter((loan) => loan.status === "active")
+      .map((loan) => {
+        const bank = BANK_BY_ID[account.defId];
+        const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
+        const dailyRate = loan.interestRate || (bank?.loanApr ?? 0) / 365;
+        const existingInterest =
+          loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
+        const principalRemaining =
+          loan.principalRemaining ?? Math.max(0, loan.remaining - existingInterest);
+        const projectedInterest = loan.remaining * (Math.pow(1 + dailyRate, elapsedDays) - 1);
+        return {
+          ...loan,
+          bankId,
+          bankName: bank?.name ?? bankId,
+          currentRemaining: loan.remaining + projectedInterest,
+          currentAccruedInterest: existingInterest + projectedInterest,
+          currentPrincipalRemaining: principalRemaining,
+        };
+      }),
+  );
+  const consolidatedDebt = allActiveLoans.reduce((sum, loan) => sum + loan.currentRemaining, 0);
 
   const categories: (BankCategory | "All")[] = [
     "All",
@@ -110,6 +94,12 @@ export function BankingView() {
     const bank = BANK_BY_ID[registering];
     if (!bank) return null;
     const estCredit = calculateBankCreditLimit(bank, s, now);
+    const brand = bankBrand(bank.id);
+    const existingAccount = accounts[bank.id];
+    const canRegister =
+      !existingAccount &&
+      registeredBankIds.length < MAX_ACTIVE_BANK_ACCOUNTS &&
+      s.level >= bank.tierRequired;
 
     return (
       <div className="space-y-4">
@@ -123,8 +113,11 @@ export function BankingView() {
         </Button>
         <Card className="border-primary/40 bg-card/95 backdrop-blur-md space-y-4 p-5 shadow-2xl">
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/15 border border-primary/40 flex items-center justify-center shrink-0">
-              <Landmark className="h-7 w-7 text-primary" />
+            <div
+              className="h-14 w-14 rounded-2xl border flex items-center justify-center shrink-0 text-lg font-black"
+              style={{ color: brand.accent, backgroundColor: brand.soft, borderColor: brand.border }}
+            >
+              {bank.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -134,14 +127,20 @@ export function BankingView() {
                 </Pill>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {bank.id} &bull; Chartered Commercial Bank
+                {bank.id} &bull; {existingAccount ? "Digital Banking Sign-In" : "New Customer Registration"}
               </p>
             </div>
           </div>
 
-          <p className="text-xs leading-relaxed text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50">
-            {bank.description}
-          </p>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
+              {existingAccount ? "Welcome back" : "Open a new account"}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-foreground">
+              {existingAccount ? `Continue as ${s.username}` : "Digital banking registration"}
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{bank.description}</p>
+          </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <div className="p-3 rounded-xl bg-muted/40 border border-border/60">
@@ -180,18 +179,42 @@ export function BankingView() {
             </p>
           </div>
 
+          {!existingAccount && (
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+              {registeredBankIds.length >= MAX_ACTIVE_BANK_ACCOUNTS
+                ? "You already have the maximum of two active bank accounts."
+                : s.level < bank.tierRequired
+                  ? `This institution requires player level ${bank.tierRequired}.`
+                  : "Registration creates an account with this institution. Browsing the bank does not create an account."}
+            </div>
+          )}
           <div className="flex gap-2.5 pt-2">
-            <Button
-              className="flex-1 bg-gradient-primary h-11 text-xs font-bold shadow-lg"
-              onClick={() => {
-                run({ type: "registerBank", bankId: bank.id }, `Registered with ${bank.name}`);
-                setRegistering(null);
-                setActiveAccountTab(bank.id);
-              }}
-              disabled={pending}
-            >
-              Open Account & Activate Credit Line
-            </Button>
+            {existingAccount ? (
+              <Button
+                className="flex-1 bg-gradient-primary h-11 text-xs font-bold shadow-lg"
+                onClick={() => {
+                  setRegistering(null);
+                  setActiveAccountTab(bank.id);
+                  setBankAppTab("overview");
+                  setAmountInput("");
+                  setLoanAmountInput("");
+                }}
+              >
+                Sign In to {bank.name}
+              </Button>
+            ) : (
+              <Button
+                className="flex-1 bg-gradient-primary h-11 text-xs font-bold shadow-lg"
+                onClick={() => {
+                  void run({ type: "registerBank", bankId: bank.id }, `Registered with ${bank.name}`);
+                  setRegistering(null);
+                  setActiveAccountTab(bank.id);
+                }}
+                disabled={pending || !canRegister}
+              >
+                Create Bank Account
+              </Button>
+            )}
             <Button variant="outline" className="h-11 text-xs" onClick={() => setRegistering(null)}>
               Cancel
             </Button>
@@ -203,204 +226,62 @@ export function BankingView() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banking Command Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Metric 1: Total Bank Reserves */}
-        <div className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-card/85 p-3.5 backdrop-blur-md">
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <Wallet className="h-3.5 w-3.5 text-gain" /> Bank Reserves
-          </div>
-          <div className="num text-xl font-black text-gain tracking-tight">
-            {money(totalReserves)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            {registeredBankIds.length} active institution{registeredBankIds.length === 1 ? "" : "s"}
+      {!activeAccountTab && (
+        <div className="space-y-6">
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
+            Banking Access Menu
           </div>
         </div>
+      )}
 
-        {/* Metric 2: Total Active Debt */}
-        <div
-          className={cn(
-            "flex flex-col gap-1 rounded-xl border p-3.5 backdrop-blur-md transition-all duration-500",
-            totalLoanDebt > 0
-              ? "border-loss/60 bg-loss/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-              : "border-primary/30 bg-card/85",
-          )}
-        >
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5 text-loss" /> Total Debt
-          </div>
-          <div className="num text-xl font-black text-loss tracking-tight">
-            {money(totalLoanDebt)}
-          </div>
-          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-            {totalLoanDebt > 0 ? "Daily interest compounding" : "Zero liabilities"}
-          </div>
-        </div>
-
-        {/* Metric 3: Total Credit Capacity */}
-        <div className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-card/85 p-3.5 backdrop-blur-md">
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <CreditCard className="h-3.5 w-3.5 text-primary" /> Credit Capacity
-          </div>
-          <div className="num text-xl font-black text-primary tracking-tight">
-            {money(totalAvailableCredit)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">Available to draw</div>
-        </div>
-
-        {/* Metric 4: Tax Liability */}
-        <div
-          className={cn(
-            "flex flex-col gap-1 rounded-xl border p-3.5 backdrop-blur-md transition-all duration-500",
-            isDanger
-              ? "border-loss bg-loss/10"
-              : isWarning
-                ? "border-amber-500/60 bg-amber-500/10"
-                : "border-primary/30 bg-card/85",
-          )}
-        >
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <Receipt className="h-3.5 w-3.5 text-amber-400" /> Tax Due
-          </div>
-          <div
-            className={cn(
-              "num text-xl font-black tracking-tight",
-              isDanger ? "text-loss" : isWarning ? "text-amber-400" : "text-foreground",
-            )}
-          >
-            {money(tax.liability)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            {isDanger ? "Audit Risk" : isWarning ? "High Dues" : "Tax Compliant"}
-          </div>
-        </div>
-      </div>
-
-      {/* Tax Management Panel */}
-      <Card
-        className={cn(
-          "relative overflow-hidden transition-all duration-500",
-          isDanger
-            ? "border-loss bg-loss/10 shadow-[0_0_25px_rgba(239,68,68,0.25)]"
-            : isWarning
-              ? "border-amber-500/60 bg-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
-              : "border-primary/30 bg-card",
-        )}
-      >
-        <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
-          <div className="flex items-center gap-2 font-bold text-sm text-foreground">
-            <Receipt
-              className={cn("h-4 w-4", isDanger ? "text-loss animate-bounce" : "text-primary")}
-            />
-            <span>Capital Fortune Internal Revenue Authority</span>
-          </div>
-          <Pill
-            tone={isDanger ? "loss" : isWarning ? "gold" : "gain"}
-            className="font-mono text-[10px]"
-          >
-            {isDanger ? "CRITICAL LIABILITY" : isWarning ? "HIGH LIABILITY" : "COMPLIANT"}
-          </Pill>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-3">
-          <div className="space-y-3">
-            <div>
-              <div className="text-[10px] uppercase font-bold text-muted-foreground">
-                Accumulated Tax Liability
-              </div>
-              <div
-                className={cn(
-                  "num text-2xl font-black tracking-tight",
-                  isDanger ? "text-loss" : isWarning ? "text-amber-400" : "text-foreground",
-                )}
-              >
-                {money(tax.liability)}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Calculated on income transfers from business wallets, rent collection, investments &
-                personal taps.
-              </p>
-            </div>
-
-            <Button
-              className={cn(
-                "w-full h-10 font-bold text-xs shadow-md transition-all",
-                isDanger
-                  ? "bg-loss text-white hover:bg-loss/90"
-                  : isWarning
-                    ? "bg-amber-600 text-white hover:bg-amber-500"
-                    : "bg-gradient-primary",
-              )}
-              onClick={() => run({ type: "settleTax" }, "Tax liability settled in full")}
-              disabled={pending || tax.liability <= 0 || s.cash < tax.liability}
-            >
-              {tax.liability <= 0
-                ? "No Outstanding Taxes"
-                : s.cash < tax.liability
-                  ? `Insufficient Cash to Settle (${money(tax.liability)})`
-                  : `Settle All Taxes (${money(tax.liability)})`}
-            </Button>
-          </div>
-
-          <div className="space-y-2 rounded-xl bg-muted/40 p-3 border border-border/60">
-            <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> Income by Category
-              </span>
-              <span className="text-[9px] font-mono opacity-70">Active Period</span>
-            </div>
-            <div className="space-y-1.5 pt-1">
-              {Object.entries(tax.periodIncome).map(([cat, val]) => (
-                <div key={cat} className="flex justify-between items-center text-[11px]">
-                  <span className="capitalize text-muted-foreground">{cat}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="num font-semibold text-foreground">{money(val)}</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-muted/80 text-muted-foreground border border-border/40">
-                      {(BALANCE.tax.rates[cat as keyof typeof BALANCE.tax.rates] * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
+      {/* Individual Bank Application */}
+      {activeAccountTab && (
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.16em] text-primary">Banking Application</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              {BANK_BY_ID[activeAccountTab]?.name ?? activeAccountTab}
             </div>
           </div>
+          <Button variant="ghost" size="sm" onClick={() => setActiveAccountTab(null)}>
+            &larr; Banking Access Menu
+          </Button>
         </div>
-
-        {isDanger && (
-          <div className="mt-1 p-2.5 rounded-lg bg-loss/15 border border-loss/30 text-[10px] text-loss font-bold flex items-center gap-2 animate-pulse">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            REGULATORY ESCALATION: Tax liability exceeds safety threshold. Settle dues to avoid
-            legal freezes.
-          </div>
-        )}
-      </Card>
+      )}
 
       {/* Active Portfolios Section */}
-      {registeredBankIds.length > 0 && (
+      {activeAccountTab && registeredBankIds.includes(activeAccountTab) && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
-              <Landmark className="h-3.5 w-3.5 text-primary" /> Active Banking Portfolios (
-              {registeredBankIds.length})
+              <Landmark className="h-3.5 w-3.5 text-primary" /> Account Dashboard
             </h4>
             <span className="text-[11px] text-muted-foreground">
-              Click institution to manage deposits & credit
+              {registeredBankIds.length} of {MAX_ACTIVE_BANK_ACCOUNTS} accounts active
             </span>
           </div>
 
           <div className="grid gap-3">
-            {registeredBankIds.map((bankId) => {
+            {[activeAccountTab].filter((bankId): bankId is string => !!bankId).map((bankId) => {
               const acc = accounts[bankId];
               const bankDef = BANK_BY_ID[bankId];
               if (!acc || !bankDef) return null;
+              const brand = bankBrand(bankId);
               const isSelected = activeAccountTab === bankId;
               const parsedAmt = parseFloat(amountInput) || 0;
               const parsedLoanAmt = parseFloat(loanAmountInput) || 0;
 
               const activeLoans = (acc.loans || []).filter((l) => l.status === "active");
-              const currentDebt = activeLoans.reduce((sum, l) => sum + l.remaining, 0);
+              const currentDebt = activeLoans.reduce((sum, loan) => {
+                const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
+                const dailyRate = loan.interestRate || bankDef.loanApr / 365;
+                return sum + loan.remaining * Math.pow(1 + dailyRate, elapsedDays);
+              }, 0);
               const bankCreditLimit = calculateBankCreditLimit(bankDef, s, now);
-              const availableCredit = Math.max(0, bankCreditLimit - currentDebt);
+              const availableCredit = getAvailableBankCredit(bankDef, s, now);
+
+              const ownedBusinesses = Object.values(s.companies || {});
+              const ownedProperties = Object.values(s.properties || {});
 
               return (
                 <Card
@@ -418,24 +299,22 @@ export function BankingView() {
                     className="flex items-center justify-between cursor-pointer p-4 select-none"
                     onClick={() => {
                       setActiveAccountTab(isSelected ? null : bankId);
+                      setBankAppTab("overview");
                       setAmountInput("");
                       setLoanAmountInput("");
                     }}
                   >
                     <div className="flex items-center gap-3.5">
                       <div
-                        className={cn(
-                          "h-11 w-11 rounded-xl flex items-center justify-center transition-all shrink-0",
-                          isSelected
-                            ? "bg-primary text-primary-foreground shadow-glow"
-                            : "bg-primary/10 text-primary border border-primary/20",
-                        )}
+                        className="h-11 w-11 rounded-xl flex items-center justify-center transition-all shrink-0 border text-sm font-black"
+                        style={{ color: brand.accent, backgroundColor: brand.soft, borderColor: brand.border }}
                       >
-                        <Building className="h-5 w-5" />
+                        {bankDef.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-black text-sm text-foreground">{bankDef.name}</span>
+                          <Pill tone="gain" className="text-[8px] uppercase font-bold py-0">Active</Pill>
                           <Pill tone="neutral" className="text-[9px] uppercase font-bold py-0">
                             {bankDef.category}
                           </Pill>
@@ -478,10 +357,36 @@ export function BankingView() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-5 gap-1 border-t border-border/60 px-3 py-2">
+                    {([
+                      ["overview", "Overview"],
+                      ["payments", "Payments"],
+                      ["loans", "Loans"],
+                      ["services", "Services"],
+                      ["activity", "Activity"],
+                    ] as const).map(([tab, label]) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setBankAppTab(tab)}
+                        className={cn(
+                          "rounded-md px-1 py-2 text-[9px] font-bold uppercase tracking-wide transition-colors",
+                          bankAppTab === tab
+                            ? "border"
+                            : "text-muted-foreground hover:bg-muted",
+                        )}
+                        style={bankAppTab === tab ? { color: brand.accent, backgroundColor: brand.soft, borderColor: brand.border } : undefined}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Expanded Banking Operations Desk */}
                   {isSelected && (
                     <div className="p-4 pt-2 border-t border-border/80 space-y-5 bg-muted/10">
-                      {/* Sub-panel 1: Deposits & Withdrawals Desk */}
+                      {(bankAppTab === "overview" || bankAppTab === "payments") && (
+
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -561,7 +466,10 @@ export function BankingView() {
                         </div>
                       </div>
 
-                      {/* Sub-panel 2: Credit Line & Loans */}
+                      )}
+
+{(bankAppTab === "overview" || bankAppTab === "loans") && (
+
                       <div className="space-y-3 border-t border-border/80 pt-4">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -582,8 +490,12 @@ export function BankingView() {
                             </span>
                           </div>
                           <div className="flex justify-between text-[11px]">
-                            <span className="text-muted-foreground">Active Loan Balance:</span>
+                            <span className="text-muted-foreground">This Bank's Active Loans:</span>
                             <span className="num font-bold text-loss">{money(currentDebt)}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-muted-foreground">Consolidated Debt (All Banks):</span>
+                            <span className="num font-bold text-loss">{money(consolidatedDebt)}</span>
                           </div>
                           <div className="flex justify-between text-[11px] font-bold border-t border-border/40 pt-1.5">
                             <span className="text-foreground">Available to Borrow:</span>
@@ -603,6 +515,21 @@ export function BankingView() {
                               </span>
                             </div>
 
+                            <div className="grid grid-cols-1 gap-2">
+                              <label className="space-y-1">
+                                <span className="text-[10px] font-bold uppercase text-muted-foreground">Loan Category</span>
+                                <select
+                                  value={loanCategoryInput}
+                                  onChange={(event) => setLoanCategoryInput(event.target.value as "personal" | "business" | "real-estate")}
+                                  className="h-9 w-full rounded-md border border-border bg-card px-2 text-xs"
+                                  disabled={pending}
+                                >
+                                  <option value="personal">Personal Loan</option>
+                                  <option value="business">Business Loan</option>
+                                  <option value="real-estate">Real Estate Loan</option>
+                                </select>
+                              </label>
+                            </div>
                             <div className="flex gap-2">
                               <Input
                                 type="number"
@@ -619,7 +546,7 @@ export function BankingView() {
                                 }
                                 onClick={() => {
                                   run(
-                                    { type: "applyLoan", bankId, amount: parsedLoanAmt },
+                                    { type: "applyLoan", bankId, amount: parsedLoanAmt, category: loanCategoryInput },
                                     `Approved for ${money(parsedLoanAmt)} credit line`,
                                   );
                                   setLoanAmountInput("");
@@ -649,72 +576,138 @@ export function BankingView() {
                           </div>
                         )}
 
-                        {/* Active Loans List */}
-                        {activeLoans.length > 0 && (
+                        {/* Consolidated Loan Portfolio */}
+                        {allActiveLoans.length > 0 && (
                           <div className="space-y-2">
-                            <div className="text-[10px] uppercase font-bold text-muted-foreground">
-                              Outstanding Loans ({activeLoans.length})
+                            <div className="flex items-center justify-between">
+                              <div className="text-[10px] uppercase font-bold text-muted-foreground">
+                                Consolidated Loan Portfolio ({allActiveLoans.length})
+                              </div>
+                              <div className="text-[10px] font-bold text-loss">
+                                Total: {money(consolidatedDebt)}
+                              </div>
                             </div>
-                            {activeLoans.map((loan) => {
-                              const dt = Math.max(0, now - s.lastTick);
-                              const dailyRate =
-                                loan.interestRate ||
-                                (bankDef.loanApr
-                                  ? bankDef.loanApr / 365
-                                  : BALANCE.interest.dailyRate);
-                              const currentRemaining =
-                                loan.remaining + loan.remaining * dailyRate * (dt / 86400000);
-
-                              return (
-                                <div
-                                  key={loan.id}
-                                  className="rounded-xl bg-loss/5 p-3 border border-loss/30 flex items-center justify-between gap-3"
-                                >
-                                  <div>
-                                    <div className="text-[11px] font-bold text-loss flex items-center gap-1.5">
-                                      <TrendingUp className="h-3 w-3 animate-pulse" /> Outstanding
-                                      Debt
-                                    </div>
-                                    <div className="num text-base font-black text-loss">
-                                      {money(currentRemaining)}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground">
-                                      Principal: {money(loan.principal)} &bull; APR:{" "}
-                                      {(dailyRate * 365 * 100).toFixed(1)}%
-                                    </div>
+                            {allActiveLoans.map((loan) => (
+                              <div
+                                key={loan.id}
+                                className="rounded-xl bg-loss/5 p-3 border border-loss/30 flex items-center justify-between gap-3"
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-[11px] font-bold text-loss flex items-center gap-1.5">
+                                    <TrendingUp className="h-3 w-3" /> {loan.bankName}
                                   </div>
-
-                                  <div className="flex gap-1.5 shrink-0">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-xs border-loss/40 text-loss hover:bg-loss hover:text-white font-bold"
-                                      disabled={pending || s.cash <= 0}
-                                      onClick={() => {
-                                        const pay = Math.min(s.cash, currentRemaining);
-                                        run(
-                                          {
-                                            type: "repayLoan",
-                                            bankId,
-                                            loanId: loan.id,
-                                            amount: pay,
-                                          },
-                                          `Repaid ${money(pay)} toward loan`,
-                                        );
-                                      }}
-                                    >
-                                      Repay {s.cash >= currentRemaining ? "Full" : "Partial"}
-                                    </Button>
+                                  <div className="num text-base font-black text-loss">
+                                    {money(loan.currentRemaining)}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {(loan.category ?? "personal").replace("-", " ")} loan &bull; Principal outstanding: {money(loan.currentPrincipalRemaining)} &bull; Accrued interest: {money(loan.currentAccruedInterest)} &bull; APR: {(loan.interestRate * 365 * 100).toFixed(1)}%
                                   </div>
                                 </div>
-                              );
-                            })}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 shrink-0 text-xs border-loss/40 text-loss hover:bg-loss hover:text-white font-bold"
+                                  disabled={pending || s.cash <= 0}
+                                  onClick={() => {
+                                    const pay = Math.min(s.cash, loan.currentRemaining);
+                                    void run(
+                                      {
+                                        type: "repayLoan",
+                                        bankId: loan.bankId,
+                                        loanId: loan.id,
+                                        amount: pay,
+                                      },
+                                      `Repaid ${money(pay)} toward loan`,
+                                    );
+                                  }}
+                                >
+                                  Repay
+                                </Button>
+                              </div>
+                            ))}
                           </div>
                         )}
-                      </div>
+                      )}
 
-                      {/* Sub-panel 3: Institutional Audit Log */}
-                      {acc.transactions && acc.transactions.length > 0 && (
+{(bankAppTab === "overview" || bankAppTab === "services") && (
+
+                      {(supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
+                        <div className="space-y-3 border-t border-border/80 pt-4">
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-wider text-foreground">
+                              Income Integrations
+                            </div>
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              Route newly generated income from eligible assets directly into this bank account. Previously accrued wallet balances can still be collected here.
+                            </p>
+                          </div>
+                          {supportsBusinessIncome(bankDef) && ownedBusinesses.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-bold uppercase text-muted-foreground">Business Income</div>
+                              {ownedBusinesses.map((company) => (
+                                <label key={company.inst} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5">
+                                  <span className="min-w-0 truncate text-[11px] font-semibold">{company.inst}</span>
+                                  <select
+                                    className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
+                                    value={company.incomeBankId ?? ""}
+                                    onChange={(event) => {
+                                      const bankId = event.target.value || null;
+                                      void run(
+                                        { type: "linkBusinessIncome", inst: company.inst, bankId },
+                                        bankId ? "Business income linked to bank account" : "Business income unlinked",
+                                      );
+                                    }}
+                                    disabled={pending}
+                                  >
+                                    <option value="">Temporary business wallet</option>
+                                    {company.incomeBankId && company.incomeBankId !== bankId && (
+                                      <option value={company.incomeBankId}>
+                                        {BANK_BY_ID[company.incomeBankId]?.name ?? company.incomeBankId}
+                                      </option>
+                                    )}
+                                    <option value={bankId}>This account — {bankDef.name}</option>
+                                  </select>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {supportsPropertyIncome(bankDef) && ownedProperties.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-bold uppercase text-muted-foreground">Real Estate Income</div>
+                              {ownedProperties.map((property) => (
+                                <label key={property.inst} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5">
+                                  <span className="min-w-0 truncate text-[11px] font-semibold">{property.inst}</span>
+                                  <select
+                                    className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
+                                    value={property.incomeBankId ?? ""}
+                                    onChange={(event) => {
+                                      const bankId = event.target.value || null;
+                                      void run(
+                                        { type: "linkPropertyIncome", inst: property.inst, bankId },
+                                        bankId ? "Property income linked to bank account" : "Property income unlinked",
+                                      );
+                                    }}
+                                    disabled={pending}
+                                  >
+                                    <option value="">Temporary property wallet</option>
+                                    {property.incomeBankId && property.incomeBankId !== bankId && (
+                                      <option value={property.incomeBankId}>
+                                        {BANK_BY_ID[property.incomeBankId]?.name ?? property.incomeBankId}
+                                      </option>
+                                    )}
+                                    <option value={bankId}>This account — {bankDef.name}</option>
+                                  </select>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      )}
+
+{/* Sub-panel 3: Institutional Audit Log */}
+                      {(bankAppTab === "overview" || bankAppTab === "activity") && acc.transactions && acc.transactions.length > 0 && (
                         <div className="space-y-2 border-t border-border/80 pt-4">
                           <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center justify-between">
                             <span className="flex items-center gap-1">
@@ -788,6 +781,8 @@ export function BankingView() {
         </div>
       )}
 
+      {!activeAccountTab && (
+        <div className="space-y-4">
       {/* Institutions Catalogue (12 Banks) */}
       <div className="space-y-4">
         <div className="flex flex-col gap-1">
@@ -908,11 +903,11 @@ export function BankingView() {
                       variant="outline"
                       className="h-8 text-[10px] font-black uppercase tracking-wider border-gain/40 text-gain hover:bg-gain hover:text-gain-foreground gap-1"
                       onClick={() => {
-                        setActiveAccountTab(bank.id);
+                        setRegistering(bank.id);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Manage Desk
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Open Bank App
                     </Button>
                   ) : (
                     <Button
@@ -928,7 +923,8 @@ export function BankingView() {
             );
           })}
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

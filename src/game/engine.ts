@@ -42,7 +42,12 @@ import {
   type OwnedCompany,
   type PlayerState,
 } from "./types";
-import { BANK_BY_ID, calculateBankCreditLimit } from "./banking";
+import {
+  BANK_BY_ID,
+  calculateBankCreditLimit,
+  getTotalActiveDebt,
+  MAX_ACTIVE_BANK_ACCOUNTS,
+} from "./banking";
 
 export type Ctx = {
   s: PlayerState;
@@ -208,6 +213,35 @@ function debit(c: Ctx, amount: number, type: string, destination: string, entity
   if (c.s.cash + 1e-9 < amount) throw new GameError("Insufficient funds");
   c.s.cash -= amount;
   c.ledger.push({ type, source: "player:cash", destination, amount: r2(amount), entity });
+}
+function creditToBank(
+  c: Ctx,
+  bankId: string,
+  amount: number,
+  transactionType: "business_income" | "property_income",
+  source: string,
+  entity: string,
+  taxCat: TaxCategory,
+) {
+  const account = c.s.bankAccounts[bankId];
+  if (!account || amount <= 0) return false;
+  credit(c, amount, source, source, entity, true, taxCat);
+  c.s.cash -= amount;
+  account.balance += amount;
+  account.transactions.push({
+    id: crypto.randomUUID(),
+    type: transactionType,
+    amount,
+    at: c.now,
+  });
+  c.ledger.push({
+    type: `${transactionType}_deposit`,
+    source: "player:cash",
+    destination: `bank:${bankId}`,
+    amount: r2(amount),
+    entity,
+  });
+  return true;
 }
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
@@ -476,13 +510,26 @@ function simulateCompanies(
       o.history = o.history.slice(-72);
     }
     let net = rev - exp;
+    let incomeDeposited = false;
     if (net >= 0) {
-      // pay down liabilities first (from profits)
+      // Pay down liabilities first (from profits).
       const pay = Math.min(o.liabilities, net * 0.25);
       o.liabilities -= pay;
       net -= pay;
-      // All business income goes to the temporary business wallet (manual transfer).
-      o.uncollected += net;
+      // Linked businesses send newly generated net income directly to the
+      // selected bank. Existing wallet balances remain untouched.
+      if (net > 0 && o.incomeBankId) {
+        incomeDeposited = creditToBank(
+          c,
+          o.incomeBankId,
+          net,
+          "business_income",
+          "company_income",
+          o.inst,
+          "business",
+        );
+      }
+      if (!incomeDeposited) o.uncollected += net;
     } else {
       let loss = -net;
       const r = Math.min(o.reserves, loss);
@@ -508,7 +555,7 @@ function simulateCompanies(
         hours,
         amount: net,
         eligible: d.offlineEligible,
-        note: note || "Added to business wallet",
+        note: note || (incomeDeposited ? "Deposited to linked bank account" : "Added to business wallet"),
       });
   }
   if (autoIncome > 0)
@@ -891,8 +938,14 @@ export function tick(c: Ctx) {
     const amt = e.net * rentHours;
     pr.rentTotal += amt;
     rent += amt;
-    // Rent accrues in the temporary rent wallet; losses drain it first, then cash.
-    const w = (pr.uncollected ?? 0) + amt;
+    // Newly generated rent is deposited directly when this property is linked.
+    // Previously accumulated wallet balances remain available for collection.
+    const linkedDeposit =
+      amt > 0 && pr.incomeBankId
+        ? creditToBank(c, pr.incomeBankId, amt, "property_income", "rent_income", pr.inst, "rental")
+        : false;
+    if (linkedDeposit) s.stats.rentEarned += amt;
+    const w = (pr.uncollected ?? 0) + (linkedDeposit ? 0 : amt);
     if (w >= 0) pr.uncollected = w;
     else {
       pr.uncollected = 0;
@@ -916,11 +969,11 @@ export function tick(c: Ctx) {
     const bankDef = BANK_BY_ID[acc.defId];
     // Daily savings yield compounding on positive balance
     if (acc.balance > 0 && dt > 0) {
-      const savingsDailyRate = (bankDef?.savingsApy ?? 0.025) / 365;
-      const earnedYield = acc.balance * savingsDailyRate * (dt / 86400000);
-      if (earnedYield > 0) {
-        acc.balance += earnedYield;
-      }
+      // Exponential accrual is partition-invariant: one long offline tick and
+      // many short online ticks produce the same result.
+      const annualYield = bankDef?.savingsApy ?? 0.025;
+      const earnedBalance = acc.balance * Math.pow(1 + annualYield, dt / (365 * 86400000));
+      if (earnedBalance > acc.balance) acc.balance = earnedBalance;
     }
     // Real-time interest on active loans
     for (const loan of acc.loans || []) {
@@ -928,8 +981,12 @@ export function tick(c: Ctx) {
         const dailyRate =
           loan.interestRate ||
           (bankDef?.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate);
-        const interest = loan.remaining * dailyRate * (dt / 86400000);
-        loan.remaining += interest;
+        const growth = Math.pow(1 + dailyRate, dt / 86400000);
+        const interestAccrued = loan.remaining * (growth - 1);
+        const priorAccrued = loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
+        loan.principalRemaining ??= Math.max(0, loan.remaining - priorAccrued);
+        loan.accruedInterest = priorAccrued + interestAccrued;
+        loan.remaining += interestAccrued;
       }
     }
   }
@@ -1040,6 +1097,8 @@ export function apply(c: Ctx, a: Action) {
     case "withdraw":
     case "applyLoan":
     case "repayLoan":
+    case "linkBusinessIncome":
+    case "linkPropertyIncome":
     case "settleTax":
       applyBank(c, a as BankAction);
       break;
@@ -1172,34 +1231,66 @@ export function apply(c: Ctx, a: Action) {
       break;
     }
     case "collect": {
-      let total = 0;
+      let collected = false;
       for (const o of Object.values(s.companies)) {
         if (a.inst && o.inst !== a.inst) continue;
-        total += o.uncollected;
+        const amount = o.uncollected;
+        if (amount <= 0) continue;
+        collected = true;
         o.uncollected = 0;
+        const destination = o.incomeBankId ? s.bankAccounts[o.incomeBankId] : null;
+        credit(c, amount, "company_collect", "companies:uncollected", o.inst, true, "business");
+        if (destination) {
+          s.cash -= amount;
+          destination.balance += amount;
+          destination.transactions.push({
+            id: crypto.randomUUID(),
+            type: "business_income",
+            amount,
+            at: c.now,
+          });
+          c.ledger.push({
+            type: "business_income_deposit",
+            source: "player:cash",
+            destination: `bank:${o.incomeBankId}`,
+            amount: r2(amount),
+            entity: o.inst,
+          });
+        }
       }
-      if (total <= 0) throw new GameError("Nothing to collect");
-      credit(
-        c,
-        total,
-        "company_collect",
-        "companies:uncollected",
-        a.inst ?? "all",
-        true,
-        "business",
-      );
+      if (!collected) throw new GameError("Nothing to collect");
       break;
     }
     case "collectRent": {
-      let total = 0;
+      let collectedTotal = 0;
       for (const pr of Object.values(s.properties)) {
         if (a.inst && pr.inst !== a.inst) continue;
-        total += pr.uncollected ?? 0;
+        const amount = pr.uncollected ?? 0;
+        if (amount <= 0) continue;
+        collectedTotal += amount;
         pr.uncollected = 0;
+        const destination = pr.incomeBankId ? s.bankAccounts[pr.incomeBankId] : null;
+        credit(c, amount, "rent_collect", "properties:uncollected", pr.inst, true, "rental");
+        if (destination) {
+          s.cash -= amount;
+          destination.balance += amount;
+          destination.transactions.push({
+            id: crypto.randomUUID(),
+            type: "property_income",
+            amount,
+            at: c.now,
+          });
+          c.ledger.push({
+            type: "property_income_deposit",
+            source: "player:cash",
+            destination: `bank:${pr.incomeBankId}`,
+            amount: r2(amount),
+            entity: pr.inst,
+          });
+        }
       }
-      if (total <= 0) throw new GameError("Nothing to collect");
-      credit(c, total, "rent_collect", "properties:uncollected", a.inst ?? "all", true, "rental");
-      s.stats.rentEarned += total;
+      if (collectedTotal <= 0) throw new GameError("Nothing to collect");
+      s.stats.rentEarned += collectedTotal;
       break;
     }
     case "hire": {
@@ -1582,6 +1673,11 @@ function applyBank(c: Ctx, a: BankAction) {
         throw new GameError("Already registered with this institution");
       const bankDef = BANK_BY_ID[a.bankId];
       if (!bankDef) throw new GameError("Unknown banking institution");
+      if (c.s.level < bankDef.tierRequired)
+        throw new GameError(`Requires player level ${bankDef.tierRequired} to open this account`);
+      const activeAccountCount = Object.values(c.s.bankAccounts).length;
+      if (activeAccountCount >= MAX_ACTIVE_BANK_ACCOUNTS)
+        throw new GameError("You can have a maximum of two active bank accounts");
       c.s.bankAccounts[a.bankId] = {
         inst: a.bankId,
         defId: a.bankId,
@@ -1631,9 +1727,9 @@ function applyBank(c: Ctx, a: BankAction) {
       const bankDef = BANK_BY_ID[a.bankId];
       if (!bankDef) throw new GameError("Unknown banking institution");
 
-      const currentDebt = (acc.loans || [])
-        .filter((l) => l.status === "active")
-        .reduce((sum, l) => sum + (l.remaining || 0), 0);
+      // Every institution assesses the same consolidated exposure. Debt at
+      // another bank reduces this bank's remaining lending capacity as well.
+      const currentDebt = getTotalActiveDebt(c.s, c.now);
       const creditLimit = calculateBankCreditLimit(bankDef, c.s, c.now);
       const availableCredit = Math.max(0, creditLimit - currentDebt);
 
@@ -1646,7 +1742,10 @@ function applyBank(c: Ctx, a: BankAction) {
       const dailyRate = bankDef.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate;
       acc.loans.push({
         id: crypto.randomUUID(),
+        category: a.category ?? "personal",
         principal: a.amount,
+        principalRemaining: a.amount,
+        accruedInterest: 0,
         interestRate: dailyRate,
         remaining: a.amount,
         nextPayment: c.now + 86400000,
@@ -1674,10 +1773,22 @@ function applyBank(c: Ctx, a: BankAction) {
       if (payAmount <= 0) throw new GameError("Loan already paid in full");
       if (c.s.cash < payAmount) throw new GameError("Insufficient cash to repay loan");
 
+      // Repay accrued interest before reducing principal.
+      const accruedInterest =
+        loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
+      const principalRemaining =
+        loan.principalRemaining ?? Math.max(0, loan.remaining - accruedInterest);
+      const interestPaid = Math.min(payAmount, accruedInterest);
+      const principalPaid = payAmount - interestPaid;
+
       debit(c, payAmount, "repayment", `bank:${a.bankId}`, a.bankId);
-      loan.remaining -= payAmount;
+      loan.accruedInterest = Math.max(0, accruedInterest - interestPaid);
+      loan.principalRemaining = Math.max(0, principalRemaining - principalPaid);
+      loan.remaining = Math.max(0, loan.remaining - payAmount);
       if (loan.remaining <= 1e-4) {
         loan.remaining = 0;
+        loan.accruedInterest = 0;
+        loan.principalRemaining = 0;
         loan.status = "repaid";
       }
       acc.transactions.push({
@@ -1686,6 +1797,30 @@ function applyBank(c: Ctx, a: BankAction) {
         amount: payAmount,
         at: c.now,
       });
+      break;
+    }
+    case "linkBusinessIncome": {
+      const company = c.s.companies[a.inst];
+      if (!company) throw new GameError("Business not found");
+      if (a.bankId !== null) {
+        const bank = BANK_BY_ID[a.bankId];
+        if (!bank || !c.s.bankAccounts[a.bankId]) throw new GameError("Active bank account required");
+        if (bank.category !== "Wide-scale" && bank.category !== "Business-finance")
+          throw new GameError("This bank does not support business income linking");
+      }
+      company.incomeBankId = a.bankId ?? undefined;
+      break;
+    }
+    case "linkPropertyIncome": {
+      const property = c.s.properties[a.inst];
+      if (!property) throw new GameError("Property not found");
+      if (a.bankId !== null) {
+        const bank = BANK_BY_ID[a.bankId];
+        if (!bank || !c.s.bankAccounts[a.bankId]) throw new GameError("Active bank account required");
+        if (bank.category !== "Wide-scale" && bank.category !== "Real-estate")
+          throw new GameError("This bank does not support property income linking");
+      }
+      property.incomeBankId = a.bankId ?? undefined;
       break;
     }
     case "settleTax": {
