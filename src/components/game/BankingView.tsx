@@ -649,7 +649,7 @@ export function BankingView() {
                               Income Integrations
                             </div>
                             <p className="mt-1 text-[10px] text-muted-foreground">
-                              Route collected income from eligible assets directly into this bank account.
+                              Route newly generated income from eligible assets directly into this bank account. Previously accrued wallet balances can still be collected here.
                             </p>
                           </div>
                           {supportsBusinessIncome(bankDef) && ownedBusinesses.length > 0 && (
