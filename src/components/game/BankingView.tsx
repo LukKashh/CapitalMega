@@ -319,7 +319,7 @@ export function BankingView() {
           </div>
 
           <div className="grid gap-3">
-            {[activeAccountTab].map((bankId) => {
+            {[activeAccountTab].filter((bankId): bankId is string => !!bankId).map((bankId) => {
               const acc = accounts[bankId];
               const bankDef = BANK_BY_ID[bankId];
               if (!acc || !bankDef) return null;
