@@ -66,7 +66,8 @@ describe("Banking Feature Logic", () => {
     const c = createCtx(s);
     apply(c, { type: "registerBank", bankId: "BNK-001" });
     apply(c, { type: "registerBank", bankId: "BNK-003" });
-    apply(c, { type: "applyLoan", bankId: "BNK-001", amount: 20_000 });
+    apply(c, { type: "applyLoan", bankId: "BNK-001", amount: 20_000, category: "business" });
+    expect(s.bankAccounts["BNK-001"].loans[0].category).toBe("business");
     expect(() => apply(c, { type: "applyLoan", bankId: "BNK-003", amount: 1 })).toThrow(
       "Loan amount exceeds available credit line",
     );
@@ -268,6 +269,7 @@ describe("Banking Feature Logic", () => {
     expect(acc.loans.length).toBe(1);
     const loan = acc.loans[0];
     expect(loan.principal).toBe(15_000);
+    expect(loan.category).toBe("personal");
     expect(loan.remaining).toBe(15_000);
     expect(loan.status).toBe("active");
     expect(getActiveDebt(acc)).toBe(15_000);
