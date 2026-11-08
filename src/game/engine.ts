@@ -1179,31 +1179,72 @@ export function apply(c: Ctx, a: Action) {
       let total = 0;
       for (const o of Object.values(s.companies)) {
         if (a.inst && o.inst !== a.inst) continue;
-        total += o.uncollected;
+        const amount = o.uncollected;
+        if (amount <= 0) continue;
         o.uncollected = 0;
+        const destination = o.incomeBankId ? s.bankAccounts[o.incomeBankId] : null;
+        credit(c, amount, "company_collect", "companies:uncollected", o.inst, true, "business");
+        if (destination) {
+          s.cash -= amount;
+          destination.balance += amount;
+          destination.transactions.push({
+            id: crypto.randomUUID(),
+            type: "business_income",
+            amount,
+            at: c.now,
+          });
+          c.ledger.push({
+            type: "business_income_deposit",
+            source: "player:cash",
+            destination: `bank:${o.incomeBankId}`,
+            amount: r2(amount),
+            entity: o.inst,
+          });
+        } else {
+          total += amount;
+        }
       }
-      if (total <= 0) throw new GameError("Nothing to collect");
-      credit(
-        c,
-        total,
-        "company_collect",
-        "companies:uncollected",
-        a.inst ?? "all",
-        true,
-        "business",
-      );
+      if (total <= 0 && !Object.values(s.companies).some((o) => o.uncollected === 0 && o.incomeBankId && (!a.inst || o.inst === a.inst))) {
+        throw new GameError("Nothing to collect");
+      }
       break;
     }
     case "collectRent": {
       let total = 0;
+      let collected = false;
       for (const pr of Object.values(s.properties)) {
         if (a.inst && pr.inst !== a.inst) continue;
-        total += pr.uncollected ?? 0;
+        const amount = pr.uncollected ?? 0;
+        if (amount <= 0) continue;
+        collected = true;
         pr.uncollected = 0;
+        const destination = pr.incomeBankId ? s.bankAccounts[pr.incomeBankId] : null;
+        credit(c, amount, "rent_collect", "properties:uncollected", pr.inst, true, "rental");
+        if (destination) {
+          s.cash -= amount;
+          destination.balance += amount;
+          destination.transactions.push({
+            id: crypto.randomUUID(),
+            type: "property_income",
+            amount,
+            at: c.now,
+          });
+          c.ledger.push({
+            type: "property_income_deposit",
+            source: "player:cash",
+            destination: `bank:${pr.incomeBankId}`,
+            amount: r2(amount),
+            entity: pr.inst,
+          });
+        } else {
+          total += amount;
+        }
       }
-      if (total <= 0) throw new GameError("Nothing to collect");
-      credit(c, total, "rent_collect", "properties:uncollected", a.inst ?? "all", true, "rental");
-      s.stats.rentEarned += total;
+      if (!collected) throw new GameError("Nothing to collect");
+      s.stats.rentEarned += Object.values(s.properties).reduce((sum, pr) => {
+        if (a.inst && pr.inst !== a.inst) return sum;
+        return sum;
+      }, 0);
       break;
     }
     case "hire": {
@@ -1695,6 +1736,30 @@ function applyBank(c: Ctx, a: BankAction) {
         amount: payAmount,
         at: c.now,
       });
+      break;
+    }
+    case "linkBusinessIncome": {
+      const company = c.s.companies[a.inst];
+      if (!company) throw new GameError("Business not found");
+      if (a.bankId !== null) {
+        const bank = BANK_BY_ID[a.bankId];
+        if (!bank || !c.s.bankAccounts[a.bankId]) throw new GameError("Active bank account required");
+        if (bank.category !== "Wide-scale" && bank.category !== "Business-finance")
+          throw new GameError("This bank does not support business income linking");
+      }
+      company.incomeBankId = a.bankId ?? undefined;
+      break;
+    }
+    case "linkPropertyIncome": {
+      const property = c.s.properties[a.inst];
+      if (!property) throw new GameError("Property not found");
+      if (a.bankId !== null) {
+        const bank = BANK_BY_ID[a.bankId];
+        if (!bank || !c.s.bankAccounts[a.bankId]) throw new GameError("Active bank account required");
+        if (bank.category !== "Wide-scale" && bank.category !== "Real-estate")
+          throw new GameError("This bank does not support property income linking");
+      }
+      property.incomeBankId = a.bankId ?? undefined;
       break;
     }
     case "settleTax": {
