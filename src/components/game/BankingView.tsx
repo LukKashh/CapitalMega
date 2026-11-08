@@ -57,8 +57,7 @@ export function BankingView() {
           const dailyRate =
             loan.interestRate ||
             (bankDef?.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate);
-          const interest = loan.remaining * dailyRate * (dt / 86400000);
-          total += loan.remaining + interest;
+          total += loan.remaining * Math.pow(1 + dailyRate, dt / 86400000);
         }
       }
     }
@@ -594,7 +593,7 @@ export function BankingView() {
                                   ? bankDef.loanApr / 365
                                   : BALANCE.interest.dailyRate);
                               const currentRemaining =
-                                loan.remaining + loan.remaining * dailyRate * (dt / 86400000);
+                                loan.remaining * Math.pow(1 + dailyRate, dt / 86400000);
 
                               return (
                                 <div
