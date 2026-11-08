@@ -69,6 +69,12 @@ export function BankingView() {
           bankId,
           bankName: bank?.name ?? bankId,
           currentRemaining: loan.remaining * Math.pow(1 + dailyRate, elapsedDays),
+          currentAccruedInterest:
+            (loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal)) +
+            loan.remaining * (Math.pow(1 + dailyRate, elapsedDays) - 1),
+          currentPrincipalRemaining:
+            loan.principalRemaining ??
+            Math.max(0, loan.remaining - (loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal)),),
         };
       }),
   );
@@ -592,7 +598,7 @@ export function BankingView() {
                                     {money(loan.currentRemaining)}
                                   </div>
                                   <div className="text-[10px] text-muted-foreground">
-                                    {(loan.category ?? "personal").replace("-", " ")} loan &bull; Principal: {money(loan.principal)} &bull; APR: {(loan.interestRate * 365 * 100).toFixed(1)}%
+                                    {(loan.category ?? "personal").replace("-", " ")} loan &bull; Principal outstanding: {money(loan.currentPrincipalRemaining)} &bull; Accrued interest: {money(loan.currentAccruedInterest)} &bull; APR: {(loan.interestRate * 365 * 100).toFixed(1)}%
                                   </div>
                                 </div>
                                 <Button
