@@ -19,12 +19,16 @@ import {
   User,
   Users,
   Trophy,
+  Landmark,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
 import { logOut } from "@/lib/firebase";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AccountManagerMenu } from "./AccountManagerMenu";
+import { BankingView } from "./BankingView";
+import { TaxView } from "./TaxView";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +63,7 @@ export function AppShell() {
   const { data, isLoading, error, refetch } = useGame();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [menu, setMenu] = useState(false);
+  const [menuPanel, setMenuPanel] = useState<"banking" | "tax" | null>(null);
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -143,58 +148,114 @@ export function AppShell() {
             className="w-[90vw] max-w-[340px] p-0 flex flex-col h-full overflow-hidden bg-background border-l border-border"
           >
             <SheetHeader className="p-4 border-b border-border">
-              <SheetTitle className="text-lg font-bold text-foreground">Navigation</SheetTitle>
+              <SheetTitle className="text-lg font-bold text-foreground">
+                {menuPanel === "banking" ? "Bank & Loans" : menuPanel === "tax" ? "Tax" : "Navigation"}
+              </SheetTitle>
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {s && (
-                <Link
-                  to="/profile"
-                  onClick={() => setMenu(false)}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-primary/30 hover:border-primary transition-all group"
-                >
-                  <div className="h-10 w-10 rounded-lg bg-primary/15 p-1 border border-primary/30 flex items-center justify-center shrink-0">
-                    <User className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                      {s.username || "Tycoon"}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span className="text-primary font-medium">LV {s.level}</span>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              <div className="space-y-1">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-2 pb-1">
-                  Menu Options
-                </div>
-                {MORE.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMenu(false)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/70",
-                      path === item.to
-                        ? "bg-primary/15 text-primary border border-primary/30 font-bold"
-                        : "text-foreground/90",
-                    )}
+              {menuPanel ? (
+                <div className="space-y-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMenuPanel(null)}
+                    className="gap-2"
                   >
-                    <item.icon className="h-4 w-4 text-primary shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="space-y-1 pt-2 border-t border-border">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-2 pb-1">
-                  System
+                    &larr; Back to Navigation
+                  </Button>
+                  {menuPanel === "banking" ? <BankingView /> : <TaxView />}
                 </div>
-                <FullscreenToggle />
-              </div>
+              ) : (
+                <>
+                  {s && (
+                    <Link
+                      to="/profile"
+                      onClick={() => setMenu(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-primary/30 hover:border-primary transition-all group"
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-primary/15 p-1 border border-primary/30 flex items-center justify-center shrink-0">
+                        <User className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                          {s.username || "Tycoon"}
+                        </div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          <span className="text-primary font-medium">LV {s.level}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  )}
+
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-2 pb-1">
+                      Financial Services
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMenuPanel("banking")}
+                      className="w-full flex items-center gap-3 rounded-xl border border-primary/30 bg-card p-3.5 text-left transition-colors hover:border-primary hover:bg-primary/5"
+                    >
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                        <Landmark className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-foreground">Bank & Loans</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          Browse banks, manage accounts, and review loans.
+                        </span>
+                      </span>
+                      <span className="text-primary">&rarr;</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMenuPanel("tax")}
+                      className="w-full flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 text-left transition-colors hover:border-amber-500/60 hover:bg-amber-500/5"
+                    >
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
+                        <Receipt className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-foreground">Tax</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          Review tax liabilities and settle outstanding taxes.
+                        </span>
+                      </span>
+                      <span className="text-amber-400">&rarr;</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-2 pb-1">
+                      Menu Options
+                    </div>
+                    {MORE.map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setMenu(false)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/70",
+                          path === item.to
+                            ? "bg-primary/15 text-primary border border-primary/30 font-bold"
+                            : "text-foreground/90",
+                        )}
+                      >
+                        <item.icon className="h-4 w-4 text-primary shrink-0" />
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+
+                  <div className="space-y-1 pt-2 border-t border-border">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-2 pb-1">
+                      System
+                    </div>
+                    <FullscreenToggle />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-4 border-t border-border bg-card/40">
