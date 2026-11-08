@@ -41,12 +41,29 @@ export function BankingView() {
   const [activeAccountTab, setActiveAccountTab] = useState<string | null>(null);
   const [amountInput, setAmountInput] = useState<string>("");
   const [loanAmountInput, setLoanAmountInput] = useState<string>("");
+  const [loanCategoryInput, setLoanCategoryInput] = useState<"personal" | "business" | "real-estate">("personal");
 
   const accounts = useMemo(() => data?.state?.bankAccounts || {}, [data?.state?.bankAccounts]);
 
   if (!data) return null;
   const s = data.state;
   const registeredBankIds = Object.keys(accounts);
+  const allActiveLoans = Object.entries(accounts).flatMap(([bankId, account]) =>
+    (account.loans || [])
+      .filter((loan) => loan.status === "active")
+      .map((loan) => {
+        const bank = BANK_BY_ID[account.defId];
+        const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
+        const dailyRate = loan.interestRate || (bank?.loanApr ?? 0) / 365;
+        return {
+          ...loan,
+          bankId,
+          bankName: bank?.name ?? bankId,
+          currentRemaining: loan.remaining * Math.pow(1 + dailyRate, elapsedDays),
+        };
+      }),
+  );
+  const consolidatedDebt = allActiveLoans.reduce((sum, loan) => sum + loan.currentRemaining, 0);
 
   const categories: (BankCategory | "All")[] = [
     "All",
@@ -240,16 +257,7 @@ export function BankingView() {
               }, 0);
               const bankCreditLimit = calculateBankCreditLimit(bankDef, s, now);
               const availableCredit = getAvailableBankCredit(bankDef, s, now);
-              const consolidatedDebt = Object.values(accounts).reduce(
-                (sum, account) => sum + (account.loans || []).reduce((loanSum, loan) => {
-                  if (loan.status !== "active") return loanSum;
-                  const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
-                  const lender = BANK_BY_ID[account.defId];
-                  const dailyRate = loan.interestRate || (lender?.loanApr ?? 0) / 365;
-                  return loanSum + loan.remaining * Math.pow(1 + dailyRate, elapsedDays);
-                }, 0),
-                0,
-              );
+
               const ownedBusinesses = Object.values(s.companies || {});
               const ownedProperties = Object.values(s.properties || {});
 
@@ -458,6 +466,21 @@ export function BankingView() {
                               </span>
                             </div>
 
+                            <div className="grid grid-cols-1 gap-2">
+                              <label className="space-y-1">
+                                <span className="text-[10px] font-bold uppercase text-muted-foreground">Loan Category</span>
+                                <select
+                                  value={loanCategoryInput}
+                                  onChange={(event) => setLoanCategoryInput(event.target.value as "personal" | "business" | "real-estate")}
+                                  className="h-9 w-full rounded-md border border-border bg-card px-2 text-xs"
+                                  disabled={pending}
+                                >
+                                  <option value="personal">Personal Loan</option>
+                                  <option value="business">Business Loan</option>
+                                  <option value="real-estate">Real Estate Loan</option>
+                                </select>
+                              </label>
+                            </div>
                             <div className="flex gap-2">
                               <Input
                                 type="number"
@@ -474,7 +497,7 @@ export function BankingView() {
                                 }
                                 onClick={() => {
                                   run(
-                                    { type: "applyLoan", bankId, amount: parsedLoanAmt },
+                                    { type: "applyLoan", bankId, amount: parsedLoanAmt, category: loanCategoryInput },
                                     `Approved for ${money(parsedLoanAmt)} credit line`,
                                   );
                                   setLoanAmountInput("");
@@ -504,70 +527,57 @@ export function BankingView() {
                           </div>
                         )}
 
-                        {/* Active Loans List */}
-                        {activeLoans.length > 0 && (
+                        {/* Consolidated Loan Portfolio */}
+                        {allActiveLoans.length > 0 && (
                           <div className="space-y-2">
-                            <div className="text-[10px] uppercase font-bold text-muted-foreground">
-                              Outstanding Loans ({activeLoans.length})
+                            <div className="flex items-center justify-between">
+                              <div className="text-[10px] uppercase font-bold text-muted-foreground">
+                                Consolidated Loan Portfolio ({allActiveLoans.length})
+                              </div>
+                              <div className="text-[10px] font-bold text-loss">
+                                Total: {money(consolidatedDebt)}
+                              </div>
                             </div>
-                            {activeLoans.map((loan) => {
-                              const dt = Math.max(0, now - s.lastTick);
-                              const dailyRate =
-                                loan.interestRate ||
-                                (bankDef.loanApr
-                                  ? bankDef.loanApr / 365
-                                  : BALANCE.interest.dailyRate);
-                              const currentRemaining =
-                                loan.remaining * Math.pow(1 + dailyRate, dt / 86400000);
-
-                              return (
-                                <div
-                                  key={loan.id}
-                                  className="rounded-xl bg-loss/5 p-3 border border-loss/30 flex items-center justify-between gap-3"
-                                >
-                                  <div>
-                                    <div className="text-[11px] font-bold text-loss flex items-center gap-1.5">
-                                      <TrendingUp className="h-3 w-3 animate-pulse" /> Outstanding
-                                      Debt
-                                    </div>
-                                    <div className="num text-base font-black text-loss">
-                                      {money(currentRemaining)}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground">
-                                      Principal: {money(loan.principal)} &bull; APR:{" "}
-                                      {(dailyRate * 365 * 100).toFixed(1)}%
-                                    </div>
+                            {allActiveLoans.map((loan) => (
+                              <div
+                                key={loan.id}
+                                className="rounded-xl bg-loss/5 p-3 border border-loss/30 flex items-center justify-between gap-3"
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-[11px] font-bold text-loss flex items-center gap-1.5">
+                                    <TrendingUp className="h-3 w-3" /> {loan.bankName}
                                   </div>
-
-                                  <div className="flex gap-1.5 shrink-0">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-xs border-loss/40 text-loss hover:bg-loss hover:text-white font-bold"
-                                      disabled={pending || s.cash <= 0}
-                                      onClick={() => {
-                                        const pay = Math.min(s.cash, currentRemaining);
-                                        run(
-                                          {
-                                            type: "repayLoan",
-                                            bankId,
-                                            loanId: loan.id,
-                                            amount: pay,
-                                          },
-                                          `Repaid ${money(pay)} toward loan`,
-                                        );
-                                      }}
-                                    >
-                                      Repay {s.cash >= currentRemaining ? "Full" : "Partial"}
-                                    </Button>
+                                  <div className="num text-base font-black text-loss">
+                                    {money(loan.currentRemaining)}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {(loan.category ?? "personal").replace("-", " ")} loan &bull; Principal: {money(loan.principal)} &bull; APR: {(loan.interestRate * 365 * 100).toFixed(1)}%
                                   </div>
                                 </div>
-                              );
-                            })}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 shrink-0 text-xs border-loss/40 text-loss hover:bg-loss hover:text-white font-bold"
+                                  disabled={pending || s.cash <= 0}
+                                  onClick={() => {
+                                    const pay = Math.min(s.cash, loan.currentRemaining);
+                                    void run(
+                                      {
+                                        type: "repayLoan",
+                                        bankId: loan.bankId,
+                                        loanId: loan.id,
+                                        amount: pay,
+                                      },
+                                      `Repaid ${money(pay)} toward loan`,
+                                    );
+                                  }}
+                                >
+                                  Repay
+                                </Button>
+                              </div>
+                            ))}
                           </div>
                         )}
-                      </div>
-
                       {/* Income routing integrations */}
                       {(supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
                         <div className="space-y-3 border-t border-border/80 pt-4">
