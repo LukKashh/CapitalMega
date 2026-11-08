@@ -9,6 +9,8 @@ import {
   calculateBankCreditLimit,
   getAvailableBankCredit,
   MAX_ACTIVE_BANK_ACCOUNTS,
+  supportsBusinessIncome,
+  supportsPropertyIncome,
   type BankCategory,
   type BankDef,
 } from "@/game/banking";
@@ -306,6 +308,8 @@ export function BankingView() {
 
               const activeLoans = (acc.loans || []).filter((l) => l.status === "active");
               const availableCredit = getAvailableBankCredit(bankDef, s, now);
+              const ownedBusinesses = Object.values(s.companies || {});
+              const ownedProperties = Object.values(s.properties || {});
 
               return (
                 <Card
@@ -617,6 +621,80 @@ export function BankingView() {
                           </div>
                         )}
                       </div>
+
+                      {/* Income routing integrations */}
+                      {(supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
+                        <div className="space-y-3 border-t border-border/80 pt-4">
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-wider text-foreground">
+                              Income Integrations
+                            </div>
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              Route collected income from eligible assets directly into this bank account.
+                            </p>
+                          </div>
+                          {supportsBusinessIncome(bankDef) && ownedBusinesses.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-bold uppercase text-muted-foreground">Business Income</div>
+                              {ownedBusinesses.map((company) => (
+                                <label key={company.inst} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5">
+                                  <span className="min-w-0 truncate text-[11px] font-semibold">{company.inst}</span>
+                                  <select
+                                    className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
+                                    value={company.incomeBankId ?? ""}
+                                    onChange={(event) => {
+                                      const bankId = event.target.value || null;
+                                      void run(
+                                        { type: "linkBusinessIncome", inst: company.inst, bankId },
+                                        bankId ? "Business income linked to bank account" : "Business income unlinked",
+                                      );
+                                    }}
+                                    disabled={pending}
+                                  >
+                                    <option value="">Temporary business wallet</option>
+                                    {company.incomeBankId && company.incomeBankId !== bankId && (
+                                      <option value={company.incomeBankId}>
+                                        {BANK_BY_ID[company.incomeBankId]?.name ?? company.incomeBankId}
+                                      </option>
+                                    )}
+                                    <option value={bankId}>This account — {bankDef.name}</option>
+                                  </select>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {supportsPropertyIncome(bankDef) && ownedProperties.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-bold uppercase text-muted-foreground">Real Estate Income</div>
+                              {ownedProperties.map((property) => (
+                                <label key={property.inst} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5">
+                                  <span className="min-w-0 truncate text-[11px] font-semibold">{property.inst}</span>
+                                  <select
+                                    className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
+                                    value={property.incomeBankId ?? ""}
+                                    onChange={(event) => {
+                                      const bankId = event.target.value || null;
+                                      void run(
+                                        { type: "linkPropertyIncome", inst: property.inst, bankId },
+                                        bankId ? "Property income linked to bank account" : "Property income unlinked",
+                                      );
+                                    }}
+                                    disabled={pending}
+                                  >
+                                    <option value="">Temporary property wallet</option>
+                                    {property.incomeBankId && property.incomeBankId !== bankId && (
+                                      <option value={property.incomeBankId}>
+                                        {BANK_BY_ID[property.incomeBankId]?.name ?? property.incomeBankId}
+                                      </option>
+                                    )}
+                                    <option value={bankId}>This account — {bankDef.name}</option>
+                                  </select>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Sub-panel 3: Institutional Audit Log */}
                       {acc.transactions && acc.transactions.length > 0 && (
