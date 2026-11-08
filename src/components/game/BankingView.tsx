@@ -7,24 +7,19 @@ import {
   BANKS,
   BANK_BY_ID,
   calculateBankCreditLimit,
-  getActiveDebt,
-  getTotalActiveDebt,
   getAvailableBankCredit,
   MAX_ACTIVE_BANK_ACCOUNTS,
   type BankCategory,
   type BankDef,
 } from "@/game/banking";
-import { netWorth } from "@/game/engine";
 import { money } from "@/lib/format";
 import { BALANCE } from "@/game/config";
 import {
   Building,
   CreditCard,
   Landmark,
-  Receipt,
   ArrowRightLeft,
   CheckCircle2,
-  AlertTriangle,
   History,
   TrendingUp,
   Wallet,
@@ -102,6 +97,11 @@ export function BankingView() {
     const bank = BANK_BY_ID[registering];
     if (!bank) return null;
     const estCredit = calculateBankCreditLimit(bank, s, now);
+    const existingAccount = accounts[bank.id];
+    const canRegister =
+      !existingAccount &&
+      registeredBankIds.length < MAX_ACTIVE_BANK_ACCOUNTS &&
+      s.level >= bank.tierRequired;
 
     return (
       <div className="space-y-4">
@@ -126,14 +126,20 @@ export function BankingView() {
                 </Pill>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {bank.id} &bull; Chartered Commercial Bank
+                {bank.id} &bull; {existingAccount ? "Digital Banking Sign-In" : "New Customer Registration"}
               </p>
             </div>
           </div>
 
-          <p className="text-xs leading-relaxed text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50">
-            {bank.description}
-          </p>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
+              {existingAccount ? "Welcome back" : "Open a new account"}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-foreground">
+              {existingAccount ? `Continue as ${s.username}` : "Digital banking registration"}
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{bank.description}</p>
+          </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <div className="p-3 rounded-xl bg-muted/40 border border-border/60">
@@ -172,18 +178,41 @@ export function BankingView() {
             </p>
           </div>
 
+          {!existingAccount && (
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+              {registeredBankIds.length >= MAX_ACTIVE_BANK_ACCOUNTS
+                ? "You already have the maximum of two active bank accounts."
+                : s.level < bank.tierRequired
+                  ? `This institution requires player level ${bank.tierRequired}.`
+                  : "Registration creates an account with this institution. Browsing the bank does not create an account."}
+            </div>
+          )}
           <div className="flex gap-2.5 pt-2">
-            <Button
-              className="flex-1 bg-gradient-primary h-11 text-xs font-bold shadow-lg"
-              onClick={() => {
-                run({ type: "registerBank", bankId: bank.id }, `Registered with ${bank.name}`);
-                setRegistering(null);
-                setActiveAccountTab(bank.id);
-              }}
-              disabled={pending}
-            >
-              Open Account & Activate Credit Line
-            </Button>
+            {existingAccount ? (
+              <Button
+                className="flex-1 bg-gradient-primary h-11 text-xs font-bold shadow-lg"
+                onClick={() => {
+                  setRegistering(null);
+                  setActiveAccountTab(bank.id);
+                  setAmountInput("");
+                  setLoanAmountInput("");
+                }}
+              >
+                Sign In to {bank.name}
+              </Button>
+            ) : (
+              <Button
+                className="flex-1 bg-gradient-primary h-11 text-xs font-bold shadow-lg"
+                onClick={() => {
+                  void run({ type: "registerBank", bankId: bank.id }, `Registered with ${bank.name}`);
+                  setRegistering(null);
+                  setActiveAccountTab(bank.id);
+                }}
+                disabled={pending || !canRegister}
+              >
+                Create Bank Account
+              </Button>
+            )}
             <Button variant="outline" className="h-11 text-xs" onClick={() => setRegistering(null)}>
               Cancel
             </Button>
@@ -784,11 +813,11 @@ export function BankingView() {
                       variant="outline"
                       className="h-8 text-[10px] font-black uppercase tracking-wider border-gain/40 text-gain hover:bg-gain hover:text-gain-foreground gap-1"
                       onClick={() => {
-                        setActiveAccountTab(bank.id);
+                        setRegistering(bank.id);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Manage Desk
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Open Bank App
                     </Button>
                   ) : (
                     <Button
