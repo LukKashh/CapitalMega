@@ -42,6 +42,25 @@ describe("Banking Feature Logic", () => {
     }).toThrow("Already registered");
   });
 
+  it("enforces a global maximum of two active bank accounts", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    apply(c, { type: "registerBank", bankId: "BNK-003" });
+    expect(() => apply(c, { type: "registerBank", bankId: "BNK-005" })).toThrow(
+      "maximum of two active bank accounts",
+    );
+    expect(Object.keys(s.bankAccounts)).toHaveLength(2);
+  });
+
+  it("enforces each bank's configured player-level account requirement", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    expect(() => apply(c, { type: "registerBank", bankId: "BNK-002" })).toThrow(
+      "Requires player level 2",
+    );
+  });
+
   it("should handle cash deposits and withdrawals with balance checks and transaction records", () => {
     const s = newPlayer(baseTime);
     s.cash = 50_000;
