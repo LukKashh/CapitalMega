@@ -269,3 +269,11 @@ export function getAvailableBankCredit(bank: BankDef, state: PlayerState, now: n
 }
 
 export const MAX_ACTIVE_BANK_ACCOUNTS = 2;
+
+export function supportsBusinessIncome(bank: BankDef): boolean {
+  return bank.category === "Wide-scale" || bank.category === "Business-finance";
+}
+
+export function supportsPropertyIncome(bank: BankDef): boolean {
+  return bank.category === "Wide-scale" || bank.category === "Real-estate";
+}
