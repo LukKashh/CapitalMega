@@ -793,6 +793,8 @@ export function BankingView() {
         </div>
       )}
 
+      {!activeAccountTab && (
+        <div className="space-y-4">
       {/* Institutions Catalogue (12 Banks) */}
       <div className="space-y-4">
         <div className="flex flex-col gap-1">
@@ -933,7 +935,8 @@ export function BankingView() {
             );
           })}
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
