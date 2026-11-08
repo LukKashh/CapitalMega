@@ -118,6 +118,30 @@ describe("Banking Feature Logic", () => {
     expect(s.properties.property_1.incomeBankId).toBe("BNK-001");
   });
 
+  it("deposits newly generated property income directly into its linked bank", () => {
+    const s = newPlayer(baseTime);
+    const c = createCtx(s);
+    apply(c, { type: "registerBank", bankId: "BNK-001" });
+    s.properties.property_1 = {
+      inst: "property_1",
+      defId: "p_studio",
+      boughtAt: baseTime,
+      price: 40_000,
+      condition: 100,
+      upgrades: {},
+      upgradeValue: 0,
+      rentTotal: 0,
+      uncollected: 0,
+      incomeBankId: "BNK-001",
+    };
+
+    tick(createCtx(s, baseTime + 3_600_000));
+
+    expect(s.bankAccounts["BNK-001"].balance).toBeGreaterThan(0);
+    expect(s.properties.property_1.uncollected).toBe(0);
+    expect(s.cash).toBe(0);
+  });
+
   it("produces equivalent savings and loan interest after one long tick or many short ticks", () => {
     const initial = newPlayer(baseTime);
     initial.cash = 150_000;
