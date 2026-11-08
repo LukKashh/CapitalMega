@@ -214,6 +214,35 @@ function debit(c: Ctx, amount: number, type: string, destination: string, entity
   c.s.cash -= amount;
   c.ledger.push({ type, source: "player:cash", destination, amount: r2(amount), entity });
 }
+function creditToBank(
+  c: Ctx,
+  bankId: string,
+  amount: number,
+  transactionType: "business_income" | "property_income",
+  source: string,
+  entity: string,
+  taxCat: TaxCategory,
+) {
+  const account = c.s.bankAccounts[bankId];
+  if (!account || amount <= 0) return false;
+  credit(c, amount, source, source, entity, true, taxCat);
+  c.s.cash -= amount;
+  account.balance += amount;
+  account.transactions.push({
+    id: crypto.randomUUID(),
+    type: transactionType,
+    amount,
+    at: c.now,
+  });
+  c.ledger.push({
+    type: `${transactionType}_deposit`,
+    source: "player:cash",
+    destination: `bank:${bankId}`,
+    amount: r2(amount),
+    entity,
+  });
+  return true;
+}
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
 const XP_TABLE = [
@@ -481,13 +510,26 @@ function simulateCompanies(
       o.history = o.history.slice(-72);
     }
     let net = rev - exp;
+    let incomeDeposited = false;
     if (net >= 0) {
-      // pay down liabilities first (from profits)
+      // Pay down liabilities first (from profits).
       const pay = Math.min(o.liabilities, net * 0.25);
       o.liabilities -= pay;
       net -= pay;
-      // All business income goes to the temporary business wallet (manual transfer).
-      o.uncollected += net;
+      // Linked businesses send newly generated net income directly to the
+      // selected bank. Existing wallet balances remain untouched.
+      if (net > 0 && o.incomeBankId) {
+        incomeDeposited = creditToBank(
+          c,
+          o.incomeBankId,
+          net,
+          "business_income",
+          "company_income",
+          o.inst,
+          "business",
+        );
+      }
+      if (!incomeDeposited) o.uncollected += net;
     } else {
       let loss = -net;
       const r = Math.min(o.reserves, loss);
@@ -513,7 +555,7 @@ function simulateCompanies(
         hours,
         amount: net,
         eligible: d.offlineEligible,
-        note: note || "Added to business wallet",
+        note: note || (incomeDeposited ? "Deposited to linked bank account" : "Added to business wallet"),
       });
   }
   if (autoIncome > 0)
