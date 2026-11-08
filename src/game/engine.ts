@@ -1044,6 +1044,8 @@ export function apply(c: Ctx, a: Action) {
     case "withdraw":
     case "applyLoan":
     case "repayLoan":
+    case "linkBusinessIncome":
+    case "linkPropertyIncome":
     case "settleTax":
       applyBank(c, a as BankAction);
       break;
@@ -1176,11 +1178,12 @@ export function apply(c: Ctx, a: Action) {
       break;
     }
     case "collect": {
-      let total = 0;
+      let collected = false;
       for (const o of Object.values(s.companies)) {
         if (a.inst && o.inst !== a.inst) continue;
         const amount = o.uncollected;
         if (amount <= 0) continue;
+        collected = true;
         o.uncollected = 0;
         const destination = o.incomeBankId ? s.bankAccounts[o.incomeBankId] : null;
         credit(c, amount, "company_collect", "companies:uncollected", o.inst, true, "business");
@@ -1200,23 +1203,18 @@ export function apply(c: Ctx, a: Action) {
             amount: r2(amount),
             entity: o.inst,
           });
-        } else {
-          total += amount;
         }
       }
-      if (total <= 0 && !Object.values(s.companies).some((o) => o.uncollected === 0 && o.incomeBankId && (!a.inst || o.inst === a.inst))) {
-        throw new GameError("Nothing to collect");
-      }
+      if (!collected) throw new GameError("Nothing to collect");
       break;
     }
     case "collectRent": {
-      let total = 0;
-      let collected = false;
+      let collectedTotal = 0;
       for (const pr of Object.values(s.properties)) {
         if (a.inst && pr.inst !== a.inst) continue;
         const amount = pr.uncollected ?? 0;
         if (amount <= 0) continue;
-        collected = true;
+        collectedTotal += amount;
         pr.uncollected = 0;
         const destination = pr.incomeBankId ? s.bankAccounts[pr.incomeBankId] : null;
         credit(c, amount, "rent_collect", "properties:uncollected", pr.inst, true, "rental");
@@ -1236,15 +1234,10 @@ export function apply(c: Ctx, a: Action) {
             amount: r2(amount),
             entity: pr.inst,
           });
-        } else {
-          total += amount;
         }
       }
-      if (!collected) throw new GameError("Nothing to collect");
-      s.stats.rentEarned += Object.values(s.properties).reduce((sum, pr) => {
-        if (a.inst && pr.inst !== a.inst) return sum;
-        return sum;
-      }, 0);
+      if (collectedTotal <= 0) throw new GameError("Nothing to collect");
+      s.stats.rentEarned += collectedTotal;
       break;
     }
     case "hire": {
