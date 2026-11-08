@@ -78,7 +78,7 @@ describe("Banking Feature Logic", () => {
     apply(c, { type: "registerBank", bankId: "BNK-001" });
     s.companies.company_1 = {
       inst: "company_1",
-      defId: "co-001",
+      defId: "lemon",
       boughtAt: baseTime,
       price: 100_000,
       staff: {},
@@ -97,7 +97,7 @@ describe("Banking Feature Logic", () => {
     };
     s.properties.property_1 = {
       inst: "property_1",
-      defId: "pr-001",
+      defId: "p_studio",
       boughtAt: baseTime,
       price: 100_000,
       condition: 100,
