@@ -8,6 +8,9 @@ import {
   BANK_BY_ID,
   calculateBankCreditLimit,
   getActiveDebt,
+  getTotalActiveDebt,
+  getAvailableBankCredit,
+  MAX_ACTIVE_BANK_ACCOUNTS,
   type BankCategory,
   type BankDef,
 } from "@/game/banking";
@@ -69,33 +72,22 @@ export function BankingView() {
     return Object.values(accounts).reduce((acc, a) => acc + (a.balance || 0), 0);
   }, [accounts]);
 
-  // Total available borrowing power across registered banks
+  // Show the best single-bank availability, not the sum of independent limits.
+  // The engine applies total debt across all institutions on every application.
   const totalAvailableCredit = useMemo(() => {
     if (!data) return 0;
-    let credit = 0;
-    for (const bankId of Object.keys(accounts)) {
-      const def = BANK_BY_ID[bankId];
-      if (def) {
-        const limit = calculateBankCreditLimit(def, data.state, now);
-        const debt = getActiveDebt(accounts[bankId]);
-        credit += Math.max(0, limit - debt);
-      }
-    }
-    return credit;
+    return Math.max(
+      0,
+      ...Object.keys(accounts).map((bankId) => {
+        const def = BANK_BY_ID[bankId];
+        return def ? getAvailableBankCredit(def, data.state, now) : 0;
+      }),
+    );
   }, [accounts, data, now]);
 
   if (!data) return null;
   const s = data.state;
   const registeredBankIds = Object.keys(accounts);
-
-  const tax = s.tax || {
-    liability: 0,
-    periodIncome: { business: 0, rental: 0, investment: 0, personal: 0 },
-    lastSettlementAt: s.createdAt,
-  };
-
-  const isWarning = tax.liability >= BALANCE.tax.thresholds.warning;
-  const isDanger = tax.liability >= BALANCE.tax.thresholds.danger;
 
   const categories: (BankCategory | "All")[] = [
     "All",
@@ -249,131 +241,17 @@ export function BankingView() {
           <div className="text-[10px] text-muted-foreground">Available to draw</div>
         </div>
 
-        {/* Metric 4: Tax Liability */}
-        <div
-          className={cn(
-            "flex flex-col gap-1 rounded-xl border p-3.5 backdrop-blur-md transition-all duration-500",
-            isDanger
-              ? "border-loss bg-loss/10"
-              : isWarning
-                ? "border-amber-500/60 bg-amber-500/10"
-                : "border-primary/30 bg-card/85",
-          )}
-        >
+        {/* Metric 4: Account Slots */}
+        <div className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-card/85 p-3.5">
           <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <Receipt className="h-3.5 w-3.5 text-amber-400" /> Tax Due
+            <Landmark className="h-3.5 w-3.5 text-primary" /> Bank Accounts
           </div>
-          <div
-            className={cn(
-              "num text-xl font-black tracking-tight",
-              isDanger ? "text-loss" : isWarning ? "text-amber-400" : "text-foreground",
-            )}
-          >
-            {money(tax.liability)}
+          <div className="num text-xl font-black text-primary tracking-tight">
+            {registeredBankIds.length} / {MAX_ACTIVE_BANK_ACCOUNTS}
           </div>
-          <div className="text-[10px] text-muted-foreground">
-            {isDanger ? "Audit Risk" : isWarning ? "High Dues" : "Tax Compliant"}
-          </div>
+          <div className="text-[10px] text-muted-foreground">Active account limit</div>
         </div>
       </div>
-
-      {/* Tax Management Panel */}
-      <Card
-        className={cn(
-          "relative overflow-hidden transition-all duration-500",
-          isDanger
-            ? "border-loss bg-loss/10 shadow-[0_0_25px_rgba(239,68,68,0.25)]"
-            : isWarning
-              ? "border-amber-500/60 bg-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
-              : "border-primary/30 bg-card",
-        )}
-      >
-        <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
-          <div className="flex items-center gap-2 font-bold text-sm text-foreground">
-            <Receipt
-              className={cn("h-4 w-4", isDanger ? "text-loss animate-bounce" : "text-primary")}
-            />
-            <span>Capital Fortune Internal Revenue Authority</span>
-          </div>
-          <Pill
-            tone={isDanger ? "loss" : isWarning ? "gold" : "gain"}
-            className="font-mono text-[10px]"
-          >
-            {isDanger ? "CRITICAL LIABILITY" : isWarning ? "HIGH LIABILITY" : "COMPLIANT"}
-          </Pill>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-3">
-          <div className="space-y-3">
-            <div>
-              <div className="text-[10px] uppercase font-bold text-muted-foreground">
-                Accumulated Tax Liability
-              </div>
-              <div
-                className={cn(
-                  "num text-2xl font-black tracking-tight",
-                  isDanger ? "text-loss" : isWarning ? "text-amber-400" : "text-foreground",
-                )}
-              >
-                {money(tax.liability)}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Calculated on income transfers from business wallets, rent collection, investments &
-                personal taps.
-              </p>
-            </div>
-
-            <Button
-              className={cn(
-                "w-full h-10 font-bold text-xs shadow-md transition-all",
-                isDanger
-                  ? "bg-loss text-white hover:bg-loss/90"
-                  : isWarning
-                    ? "bg-amber-600 text-white hover:bg-amber-500"
-                    : "bg-gradient-primary",
-              )}
-              onClick={() => run({ type: "settleTax" }, "Tax liability settled in full")}
-              disabled={pending || tax.liability <= 0 || s.cash < tax.liability}
-            >
-              {tax.liability <= 0
-                ? "No Outstanding Taxes"
-                : s.cash < tax.liability
-                  ? `Insufficient Cash to Settle (${money(tax.liability)})`
-                  : `Settle All Taxes (${money(tax.liability)})`}
-            </Button>
-          </div>
-
-          <div className="space-y-2 rounded-xl bg-muted/40 p-3 border border-border/60">
-            <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> Income by Category
-              </span>
-              <span className="text-[9px] font-mono opacity-70">Active Period</span>
-            </div>
-            <div className="space-y-1.5 pt-1">
-              {Object.entries(tax.periodIncome).map(([cat, val]) => (
-                <div key={cat} className="flex justify-between items-center text-[11px]">
-                  <span className="capitalize text-muted-foreground">{cat}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="num font-semibold text-foreground">{money(val)}</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-muted/80 text-muted-foreground border border-border/40">
-                      {(BALANCE.tax.rates[cat as keyof typeof BALANCE.tax.rates] * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {isDanger && (
-          <div className="mt-1 p-2.5 rounded-lg bg-loss/15 border border-loss/30 text-[10px] text-loss font-bold flex items-center gap-2 animate-pulse">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            REGULATORY ESCALATION: Tax liability exceeds safety threshold. Settle dues to avoid
-            legal freezes.
-          </div>
-        )}
-      </Card>
 
       {/* Active Portfolios Section */}
       {registeredBankIds.length > 0 && (
@@ -398,9 +276,7 @@ export function BankingView() {
               const parsedLoanAmt = parseFloat(loanAmountInput) || 0;
 
               const activeLoans = (acc.loans || []).filter((l) => l.status === "active");
-              const currentDebt = activeLoans.reduce((sum, l) => sum + l.remaining, 0);
-              const bankCreditLimit = calculateBankCreditLimit(bankDef, s, now);
-              const availableCredit = Math.max(0, bankCreditLimit - currentDebt);
+              const availableCredit = getAvailableBankCredit(bankDef, s, now);
 
               return (
                 <Card
