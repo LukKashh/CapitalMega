@@ -42,6 +42,7 @@ export function BankingView() {
   const [amountInput, setAmountInput] = useState<string>("");
   const [loanAmountInput, setLoanAmountInput] = useState<string>("");
   const [loanCategoryInput, setLoanCategoryInput] = useState<"personal" | "business" | "real-estate">("personal");
+  const [bankAppTab, setBankAppTab] = useState<"overview" | "payments" | "loans" | "services" | "activity">("overview");
 
   const accounts = useMemo(() => data?.state?.bankAccounts || {}, [data?.state?.bankAccounts]);
 
@@ -175,6 +176,7 @@ export function BankingView() {
                 onClick={() => {
                   setRegistering(null);
                   setActiveAccountTab(bank.id);
+                  setBankAppTab("overview");
                   setAmountInput("");
                   setLoanAmountInput("");
                 }}
@@ -277,6 +279,7 @@ export function BankingView() {
                     className="flex items-center justify-between cursor-pointer p-4 select-none"
                     onClick={() => {
                       setActiveAccountTab(isSelected ? null : bankId);
+                      setBankAppTab("overview");
                       setAmountInput("");
                       setLoanAmountInput("");
                     }}
@@ -337,10 +340,35 @@ export function BankingView() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-5 gap-1 border-t border-border/60 px-3 py-2">
+                    {([
+                      ["overview", "Overview"],
+                      ["payments", "Payments"],
+                      ["loans", "Loans"],
+                      ["services", "Services"],
+                      ["activity", "Activity"],
+                    ] as const).map(([tab, label]) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setBankAppTab(tab)}
+                        className={cn(
+                          "rounded-md px-1 py-2 text-[9px] font-bold uppercase tracking-wide transition-colors",
+                          bankAppTab === tab
+                            ? "bg-primary/15 text-primary border border-primary/30"
+                            : "text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Expanded Banking Operations Desk */}
                   {isSelected && (
                     <div className="p-4 pt-2 border-t border-border/80 space-y-5 bg-muted/10">
-                      {/* Sub-panel 1: Deposits & Withdrawals Desk */}
+                      {(bankAppTab === "overview" || bankAppTab === "payments") && (
+{/* Sub-panel 1: Deposits & Withdrawals Desk */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -420,7 +448,10 @@ export function BankingView() {
                         </div>
                       </div>
 
-                      {/* Sub-panel 2: Credit Line & Loans */}
+                      )}
+
+{(bankAppTab === "overview" || bankAppTab === "loans") && (
+{/* Sub-panel 2: Credit Line & Loans */}
                       <div className="space-y-3 border-t border-border/80 pt-4">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -578,7 +609,10 @@ export function BankingView() {
                             ))}
                           </div>
                         )}
-                      {/* Income routing integrations */}
+                      )}
+
+{(bankAppTab === "overview" || bankAppTab === "services") && (
+{/* Income routing integrations */}
                       {(supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
                         <div className="space-y-3 border-t border-border/80 pt-4">
                           <div>
@@ -652,8 +686,10 @@ export function BankingView() {
                         </div>
                       )}
 
-                      {/* Sub-panel 3: Institutional Audit Log */}
-                      {acc.transactions && acc.transactions.length > 0 && (
+                      )}
+
+{/* Sub-panel 3: Institutional Audit Log */}
+                      {(bankAppTab === "overview" || bankAppTab === "activity") && acc.transactions && acc.transactions.length > 0 && (
                         <div className="space-y-2 border-t border-border/80 pt-4">
                           <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center justify-between">
                             <span className="flex items-center gap-1">
