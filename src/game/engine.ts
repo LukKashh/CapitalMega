@@ -1724,7 +1724,7 @@ function applyBank(c: Ctx, a: BankAction) {
 
       // Every institution assesses the same consolidated exposure. Debt at
       // another bank reduces this bank's remaining lending capacity as well.
-      const currentDebt = getTotalActiveDebt(c.s);
+      const currentDebt = getTotalActiveDebt(c.s, c.now);
       const creditLimit = calculateBankCreditLimit(bankDef, c.s, c.now);
       const availableCredit = Math.max(0, creditLimit - currentDebt);
 
