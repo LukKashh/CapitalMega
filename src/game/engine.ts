@@ -981,7 +981,12 @@ export function tick(c: Ctx) {
         const dailyRate =
           loan.interestRate ||
           (bankDef?.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate);
-        loan.remaining *= Math.pow(1 + dailyRate, dt / 86400000);
+        const growth = Math.pow(1 + dailyRate, dt / 86400000);
+        const interestAccrued = loan.remaining * (growth - 1);
+        const priorAccrued = loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
+        loan.principalRemaining ??= Math.max(0, loan.remaining - priorAccrued);
+        loan.accruedInterest = priorAccrued + interestAccrued;
+        loan.remaining += interestAccrued;
       }
     }
   }
@@ -1739,6 +1744,8 @@ function applyBank(c: Ctx, a: BankAction) {
         id: crypto.randomUUID(),
         category: a.category ?? "personal",
         principal: a.amount,
+        principalRemaining: a.amount,
+        accruedInterest: 0,
         interestRate: dailyRate,
         remaining: a.amount,
         nextPayment: c.now + 86400000,
@@ -1766,10 +1773,22 @@ function applyBank(c: Ctx, a: BankAction) {
       if (payAmount <= 0) throw new GameError("Loan already paid in full");
       if (c.s.cash < payAmount) throw new GameError("Insufficient cash to repay loan");
 
+      // Repay accrued interest before reducing principal.
+      const accruedInterest =
+        loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
+      const principalRemaining =
+        loan.principalRemaining ?? Math.max(0, loan.remaining - accruedInterest);
+      const interestPaid = Math.min(payAmount, accruedInterest);
+      const principalPaid = payAmount - interestPaid;
+
       debit(c, payAmount, "repayment", `bank:${a.bankId}`, a.bankId);
-      loan.remaining -= payAmount;
+      loan.accruedInterest = Math.max(0, accruedInterest - interestPaid);
+      loan.principalRemaining = Math.max(0, principalRemaining - principalPaid);
+      loan.remaining = Math.max(0, loan.remaining - payAmount);
       if (loan.remaining <= 1e-4) {
         loan.remaining = 0;
+        loan.accruedInterest = 0;
+        loan.principalRemaining = 0;
         loan.status = "repaid";
       }
       acc.transactions.push({
