@@ -226,7 +226,12 @@ export function BankingView() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banking Command Overview */}
+      {!activeAccountTab && (
+        <div className="space-y-6">
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
+            Banking Access Menu
+          </div>
+          {/* Top Banking Command Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Metric 1: Total Bank Reserves */}
         <div className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-card/85 p-3.5 backdrop-blur-md">
@@ -284,21 +289,38 @@ export function BankingView() {
         </div>
       </div>
 
+        </div>
+      )}
+
+      {/* Individual Bank Application */}
+      {activeAccountTab && (
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.16em] text-primary">Banking Application</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              {BANK_BY_ID[activeAccountTab]?.name ?? activeAccountTab}
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setActiveAccountTab(null)}>
+            &larr; Banking Access Menu
+          </Button>
+        </div>
+      )}
+
       {/* Active Portfolios Section */}
-      {registeredBankIds.length > 0 && (
+      {activeAccountTab && registeredBankIds.includes(activeAccountTab) && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
-              <Landmark className="h-3.5 w-3.5 text-primary" /> Active Banking Portfolios (
-              {registeredBankIds.length})
+              <Landmark className="h-3.5 w-3.5 text-primary" /> Account Dashboard
             </h4>
             <span className="text-[11px] text-muted-foreground">
-              Click institution to manage deposits & credit
+              {registeredBankIds.length} of {MAX_ACTIVE_BANK_ACCOUNTS} accounts active
             </span>
           </div>
 
           <div className="grid gap-3">
-            {registeredBankIds.map((bankId) => {
+            {[activeAccountTab].map((bankId) => {
               const acc = accounts[bankId];
               const bankDef = BANK_BY_ID[bankId];
               if (!acc || !bankDef) return null;
