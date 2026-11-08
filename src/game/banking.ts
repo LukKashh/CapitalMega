@@ -254,3 +254,18 @@ export function getActiveDebt(acc?: PlayerState["bankAccounts"][string]): number
     .filter((l) => l.status === "active")
     .reduce((sum, l) => sum + (l.remaining || 0), 0);
 }
+
+/** Consolidated outstanding exposure across every institution. */
+export function getTotalActiveDebt(state: PlayerState): number {
+  return Object.values(state.bankAccounts || {}).reduce(
+    (sum, account) => sum + getActiveDebt(account),
+    0,
+  );
+}
+
+/** Remaining borrowing capacity at this institution after all cross-bank debt. */
+export function getAvailableBankCredit(bank: BankDef, state: PlayerState, now: number): number {
+  return Math.max(0, calculateBankCreditLimit(bank, state, now) - getTotalActiveDebt(state));
+}
+
+export const MAX_ACTIVE_BANK_ACCOUNTS = 2;
