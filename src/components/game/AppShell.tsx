@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
 import { logOut } from "@/lib/firebase";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { AccountManagerMenu } from "./AccountManagerMenu";
 import { BankingView } from "./BankingView";
 import { TaxView } from "./TaxView";
 import {
