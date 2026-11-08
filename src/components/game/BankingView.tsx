@@ -233,7 +233,23 @@ export function BankingView() {
               const parsedLoanAmt = parseFloat(loanAmountInput) || 0;
 
               const activeLoans = (acc.loans || []).filter((l) => l.status === "active");
+              const currentDebt = activeLoans.reduce((sum, loan) => {
+                const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
+                const dailyRate = loan.interestRate || bankDef.loanApr / 365;
+                return sum + loan.remaining * Math.pow(1 + dailyRate, elapsedDays);
+              }, 0);
+              const bankCreditLimit = calculateBankCreditLimit(bankDef, s, now);
               const availableCredit = getAvailableBankCredit(bankDef, s, now);
+              const consolidatedDebt = Object.values(accounts).reduce(
+                (sum, account) => sum + (account.loans || []).reduce((loanSum, loan) => {
+                  if (loan.status !== "active") return loanSum;
+                  const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
+                  const lender = BANK_BY_ID[account.defId];
+                  const dailyRate = loan.interestRate || (lender?.loanApr ?? 0) / 365;
+                  return loanSum + loan.remaining * Math.pow(1 + dailyRate, elapsedDays);
+                }, 0),
+                0,
+              );
               const ownedBusinesses = Object.values(s.companies || {});
               const ownedProperties = Object.values(s.properties || {});
 
@@ -417,8 +433,12 @@ export function BankingView() {
                             </span>
                           </div>
                           <div className="flex justify-between text-[11px]">
-                            <span className="text-muted-foreground">Active Loan Balance:</span>
+                            <span className="text-muted-foreground">This Bank's Active Loans:</span>
                             <span className="num font-bold text-loss">{money(currentDebt)}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-muted-foreground">Consolidated Debt (All Banks):</span>
+                            <span className="num font-bold text-loss">{money(consolidatedDebt)}</span>
                           </div>
                           <div className="flex justify-between text-[11px] font-bold border-t border-border/40 pt-1.5">
                             <span className="text-foreground">Available to Borrow:</span>
