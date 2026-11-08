@@ -137,6 +137,8 @@ export type PlayerState = {
         id: string;
         category?: "personal" | "business" | "real-estate";
         principal: number;
+        principalRemaining?: number;
+        accruedInterest?: number;
         interestRate: number;
         remaining: number;
         nextPayment: number;
