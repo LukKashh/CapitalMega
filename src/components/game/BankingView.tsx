@@ -44,41 +44,6 @@ export function BankingView() {
 
   const accounts = useMemo(() => data?.state?.bankAccounts || {}, [data?.state?.bankAccounts]);
 
-  const totalLoanDebt = useMemo(() => {
-    if (!data) return 0;
-    let total = 0;
-    for (const acc of Object.values(accounts)) {
-      const bankDef = BANK_BY_ID[acc.defId];
-      for (const loan of acc.loans || []) {
-        if (loan.status === "active") {
-          const dt = Math.max(0, now - data.state.lastTick);
-          const dailyRate =
-            loan.interestRate ||
-            (bankDef?.loanApr ? bankDef.loanApr / 365 : BALANCE.interest.dailyRate);
-          total += loan.remaining * Math.pow(1 + dailyRate, dt / 86400000);
-        }
-      }
-    }
-    return total;
-  }, [accounts, now, data]);
-
-  const totalReserves = useMemo(() => {
-    return Object.values(accounts).reduce((acc, a) => acc + (a.balance || 0), 0);
-  }, [accounts]);
-
-  // Show the best single-bank availability, not the sum of independent limits.
-  // The engine applies total debt across all institutions on every application.
-  const totalAvailableCredit = useMemo(() => {
-    if (!data) return 0;
-    return Math.max(
-      0,
-      ...Object.keys(accounts).map((bankId) => {
-        const def = BANK_BY_ID[bankId];
-        return def ? getAvailableBankCredit(def, data.state, now) : 0;
-      }),
-    );
-  }, [accounts, data, now]);
-
   if (!data) return null;
   const s = data.state;
   const registeredBankIds = Object.keys(accounts);
@@ -228,64 +193,6 @@ export function BankingView() {
           <div className="text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
             Banking Access Menu
           </div>
-          {/* Top Banking Command Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Metric 1: Total Bank Reserves */}
-        <div className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-card/85 p-3.5 backdrop-blur-md">
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <Wallet className="h-3.5 w-3.5 text-gain" /> Bank Reserves
-          </div>
-          <div className="num text-xl font-black text-gain tracking-tight">
-            {money(totalReserves)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            {registeredBankIds.length} active institution{registeredBankIds.length === 1 ? "" : "s"}
-          </div>
-        </div>
-
-        {/* Metric 2: Total Active Debt */}
-        <div
-          className={cn(
-            "flex flex-col gap-1 rounded-xl border p-3.5 backdrop-blur-md transition-all duration-500",
-            totalLoanDebt > 0
-              ? "border-loss/60 bg-loss/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-              : "border-primary/30 bg-card/85",
-          )}
-        >
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5 text-loss" /> Total Debt
-          </div>
-          <div className="num text-xl font-black text-loss tracking-tight">
-            {money(totalLoanDebt)}
-          </div>
-          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-            {totalLoanDebt > 0 ? "Daily interest compounding" : "Zero liabilities"}
-          </div>
-        </div>
-
-        {/* Metric 3: Total Credit Capacity */}
-        <div className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-card/85 p-3.5 backdrop-blur-md">
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <CreditCard className="h-3.5 w-3.5 text-primary" /> Credit Capacity
-          </div>
-          <div className="num text-xl font-black text-primary tracking-tight">
-            {money(totalAvailableCredit)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">Available to draw</div>
-        </div>
-
-        {/* Metric 4: Account Slots */}
-        <div className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-card/85 p-3.5">
-          <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
-            <Landmark className="h-3.5 w-3.5 text-primary" /> Bank Accounts
-          </div>
-          <div className="num text-xl font-black text-primary tracking-tight">
-            {registeredBankIds.length} / {MAX_ACTIVE_BANK_ACCOUNTS}
-          </div>
-          <div className="text-[10px] text-muted-foreground">Active account limit</div>
-        </div>
-      </div>
-
         </div>
       )}
 
