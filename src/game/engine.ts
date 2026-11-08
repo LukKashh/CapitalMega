@@ -938,8 +938,14 @@ export function tick(c: Ctx) {
     const amt = e.net * rentHours;
     pr.rentTotal += amt;
     rent += amt;
-    // Rent accrues in the temporary rent wallet; losses drain it first, then cash.
-    const w = (pr.uncollected ?? 0) + amt;
+    // Newly generated rent is deposited directly when this property is linked.
+    // Previously accumulated wallet balances remain available for collection.
+    const linkedDeposit =
+      amt > 0 && pr.incomeBankId
+        ? creditToBank(c, pr.incomeBankId, amt, "property_income", "rent_income", pr.inst, "rental")
+        : false;
+    if (linkedDeposit) s.stats.rentEarned += amt;
+    const w = (pr.uncollected ?? 0) + (linkedDeposit ? 0 : amt);
     if (w >= 0) pr.uncollected = w;
     else {
       pr.uncollected = 0;
