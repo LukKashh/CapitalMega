@@ -368,7 +368,7 @@ export function BankingView() {
                   {isSelected && (
                     <div className="p-4 pt-2 border-t border-border/80 space-y-5 bg-muted/10">
                       {(bankAppTab === "overview" || bankAppTab === "payments") && (
-{/* Sub-panel 1: Deposits & Withdrawals Desk */}
+
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -451,7 +451,7 @@ export function BankingView() {
                       )}
 
 {(bankAppTab === "overview" || bankAppTab === "loans") && (
-{/* Sub-panel 2: Credit Line & Loans */}
+
                       <div className="space-y-3 border-t border-border/80 pt-4">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -612,7 +612,7 @@ export function BankingView() {
                       )}
 
 {(bankAppTab === "overview" || bankAppTab === "services") && (
-{/* Income routing integrations */}
+
                       {(supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
                         <div className="space-y-3 border-t border-border/80 pt-4">
                           <div>
