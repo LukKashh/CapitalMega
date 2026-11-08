@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/game/ui";
-import { ArrowLeft, Landmark, Trophy, UserCheck } from "lucide-react";
+import { ArrowLeft, Landmark, Trophy, UserCheck, Receipt } from "lucide-react";
 import { ProfileView } from "./ProfileView";
 import { AchievementsView } from "./AchievementsView";
 import { BankingView } from "./BankingView";
+import { TaxView } from "./TaxView";
 
 export function AccountManagerMenu({ onClose }: { onClose?: () => void }) {
-  const [view, setView] = useState<"main" | "profile" | "achievements" | "banking">("main");
+  const [view, setView] = useState<"main" | "profile" | "achievements" | "banking" | "tax">("main");
 
   if (view === "profile") {
     return (
@@ -53,7 +54,8 @@ export function AccountManagerMenu({ onClose }: { onClose?: () => void }) {
     );
   }
 
-  if (view === "banking") {
+  if (view === "banking" || view === "tax") {
+    const isTax = view === "tax";
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-border/60">
@@ -67,10 +69,10 @@ export function AccountManagerMenu({ onClose }: { onClose?: () => void }) {
             Back to Account Manager
           </Button>
           <span className="text-xs font-bold text-primary uppercase tracking-wider">
-            Banking & Tax Panel
+            {isTax ? "Tax" : "Bank & Loans"}
           </span>
         </div>
-        <BankingView />
+        {isTax ? <TaxView /> : <BankingView />}
       </div>
     );
   }
@@ -128,7 +130,7 @@ export function AccountManagerMenu({ onClose }: { onClose?: () => void }) {
           </div>
         </Card>
 
-        {/* Option 3: Banking & Tax Panel */}
+        {/* Option 3: Bank & Loans */}
         <Card
           className="p-4 cursor-pointer hover:border-primary/60 transition-all border-border/80 bg-card/90 group"
           onClick={() => setView("banking")}
@@ -139,11 +141,32 @@ export function AccountManagerMenu({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-bold text-sm text-foreground flex items-center justify-between">
-                <span>3. Banking & Tax Panel</span>
+                <span>3. Bank & Loans</span>
                 <span className="text-xs text-emerald-400 font-normal">&rarr;</span>
               </div>
               <div className="text-xs text-muted-foreground">
-                Manage 12 banking institutions, deposits, credit lines, and tax compliance.
+                Access banking institutions, accounts, services, and loan management.
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Option 4: Tax */}
+        <Card
+          className="p-4 cursor-pointer hover:border-primary/60 transition-all border-border/80 bg-card/90 group"
+          onClick={() => setView("tax")}
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Receipt className="h-5 w-5 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm text-foreground flex items-center justify-between">
+                <span>4. Tax</span>
+                <span className="text-xs text-amber-400 font-normal">&rarr;</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Review tax liabilities, income categories, and settle outstanding taxes.
               </div>
             </div>
           </div>
