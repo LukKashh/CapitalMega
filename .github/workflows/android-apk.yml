@@ -45,6 +45,12 @@ jobs:
       - name: Patch native Google sign-in activity
         run: bash scripts/patch-android-google-login.sh
 
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: capital-fortune-debug-keystore-v1
+
       - name: Compile debug APK
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace assembleDebug
