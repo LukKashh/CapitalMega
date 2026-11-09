@@ -998,7 +998,9 @@ export function tick(c: Ctx) {
     if (report.lines.length || report.rent || report.rp) s.lastOffline = report;
   }
   snapshot(c);
-  checkAchievements(c);
+  // Achievement evaluation is orchestrated once after tick + action processing
+  // by the persistence adapter. Running it here as well would duplicate the
+  // full achievement and net-worth scans on every player action.
 }
 
 function snapshot(c: Ctx) {
@@ -1665,7 +1667,7 @@ export function apply(c: Ctx, a: Action) {
     }
   }
   if (!Number.isFinite(s.cash) || s.cash < -1e-6) throw new GameError("Insufficient funds");
-  checkAchievements(c);
+  // Achievement evaluation is performed once by the action-processing boundary.
 }
 
 function applyBank(c: Ctx, a: BankAction) {
