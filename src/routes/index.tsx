@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { art } from "@/components/game/art";
 import { Button } from "@/components/ui/button";
-import { auth, onAuthStateChanged } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,11 +38,14 @@ export const Route = createFileRoute("/")({
 function Landing() {
   const navigate = useNavigate();
   useEffect(() => {
-    if (auth.currentUser) navigate({ to: "/home", replace: true });
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) navigate({ to: "/home", replace: true });
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) navigate({ to: "/home", replace: true });
     });
-    return () => unsubscribe();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) navigate({ to: "/home", replace: true });
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, [navigate]);
 
   return (
