@@ -98,7 +98,9 @@ export async function writeLocalRecords(writes: LocalRecordWrite[]): Promise<voi
     return;
   }
   const database = await getNativeDatabase();
-  await database.execute("BEGIN IMMEDIATE TRANSACTION;");
+  // Use the plugin's transaction API instead of issuing transaction-control SQL
+  // through execute(), which may be wrapped by platform-specific execution logic.
+  await database.beginTransaction();
   try {
     for (const write of writes) {
       if (write.value === null) {
@@ -113,10 +115,11 @@ export async function writeLocalRecords(writes: LocalRecordWrite[]): Promise<voi
         );
       }
     }
-    await database.execute("COMMIT;");
+    await database.commitTransaction();
   } catch (error) {
     try {
-      await database.execute("ROLLBACK;");
+      const transaction = await database.isTransactionActive();
+      if (transaction.result) await database.rollbackTransaction();
     } catch {
       /* Keep original error. */
     }

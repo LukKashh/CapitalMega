@@ -71,7 +71,7 @@ function corpView(c: CorpState | null, uid: string) {
   };
 }
 
-/** Secret per-round casino seed: HMAC(server key, user:round). */
+/** Generate a per-round local casino seed. No server secret is available offline. */
 async function casinoSeed(_uid: string, _round: number) {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -89,7 +89,7 @@ async function run(
   }
   let lastErr: unknown;
   for (let attempt = 0; attempt < 4; attempt++) {
-    const now = Date.now(); // server time is authoritative
+    const now = Date.now(); // Device-local time is used in standalone mode.
     const playerRef = doc(db, "player_states", uid);
     const snap = await getDoc(playerRef);
     const row = snap.exists()
@@ -195,8 +195,7 @@ async function run(
       throw e;
     }
 
-    // Atomic transaction commit to Firestore. Complete every transaction read
-    // before issuing the first write; Firestore rejects read-after-write flows.
+    // Atomically commit the complete local save, public projections and ledger.
     try {
       const commit = await runTransaction(db, async (tx) => {
         const curSnap = await tx.get(playerRef);
@@ -359,12 +358,12 @@ async function run(
         return { ok: false as const, error: "This limited edition is sold out" };
       if (msg.includes("player_username_unique"))
         return { ok: false as const, error: "That username is taken" };
-      console.warn("Firestore transaction commit failed:", txErr);
+      console.error("Local save transaction failed:", txErr);
       return {
         ok: false as const,
         error: action
-          ? "Action could not be saved. Please retry."
-          : "Your saved game could not be synchronized. Please retry.",
+          ? `Action could not be saved locally: ${msg}`
+          : `Your local save could not be loaded: ${msg}`,
       };
     }
   }
