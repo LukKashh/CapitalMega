@@ -130,26 +130,35 @@ function HomePage() {
                 <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-background bg-gain shadow-[0_0_5px_rgba(34,197,94,0.9)]" />
               </div>
 
-              <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5 overflow-hidden">
-                <div className="flex items-center justify-between gap-1 min-w-0">
-                  <span className="truncate text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+              <div className="home-profile-info min-w-0 flex-1 flex flex-col justify-center overflow-hidden">
+                <div className="home-profile-heading flex items-center justify-between gap-1 min-w-0">
+                  <span className="home-profile-name truncate text-xs font-bold text-foreground group-hover:text-primary transition-colors">
                     {s.username || "Tycoon"}
                   </span>
-                  <span className="shrink-0 rounded bg-gradient-to-r from-purple-900/90 to-indigo-900/90 px-1 py-0.2 text-[8px] font-extrabold tracking-wider text-primary-glow border border-primary/40">
+                  <span className="home-profile-level shrink-0 rounded-md px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider">
                     LV {s.level}
                   </span>
                 </div>
-                {/* Sub-Tab Window for Balance Value */}
-                <div className="flex items-center gap-1 rounded-md bg-muted/40 border border-primary/25 px-1.5 py-0.5 min-w-0 overflow-hidden justify-between">
-                  <div className="flex items-center gap-0.5 min-w-0 truncate">
-                    <Wallet className="h-2.5 w-2.5 text-gold shrink-0" />
-                    <span className="num text-[10px] font-bold text-gain truncate">
+                <div className="home-profile-balance-row flex items-center justify-between gap-1 min-w-0">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <Wallet className="h-3 w-3 text-gold shrink-0" />
+                    <span className="home-profile-cash num truncate text-[10px] font-bold text-gain">
                       {money(s.cash + opt.cash)}
                     </span>
                   </div>
-                  <span className="num text-[8px] font-mono text-muted-foreground shrink-0">
+                  <span className="home-profile-xp-value num shrink-0 text-[8px] font-mono text-muted-foreground">
                     {Math.floor(xpPct)}%
                   </span>
+                </div>
+                <div
+                  className="home-profile-xp-track"
+                  role="progressbar"
+                  aria-label="Experience progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.floor(xpPct)}
+                >
+                  <span style={{ width: `${xpPct}%` }} />
                 </div>
               </div>
             </Link>
