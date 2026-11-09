@@ -96,7 +96,10 @@ function HomePage() {
       duration: 2200,
     };
     setRipples((list) => [...list.slice(-11), ripple]);
-    setTimeout(() => setRipples((list) => list.filter((item) => item.id !== ripple.id)), ripple.duration + 360);
+    setTimeout(
+      () => setRipples((list) => list.filter((item) => item.id !== ripple.id)),
+      ripple.duration + 360,
+    );
   };
 
   const handleFramePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -232,11 +235,20 @@ function HomePage() {
             <div className="home-tap-orbit absolute rounded-full" />
             <div className="home-tap-medallion relative flex items-center justify-center">
               <div className="home-tap-medallion-glint absolute inset-0 rounded-full" />
-              <img src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png" alt="" draggable={false} className="home-tap-coin relative z-[1] h-full w-full select-none object-contain" />
+              <img
+                src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png"
+                alt=""
+                draggable={false}
+                className="home-tap-coin relative z-[1] h-full w-full select-none object-contain"
+              />
             </div>
             <div className="relative z-[2] flex flex-col items-center gap-1.5">
-              <span className="home-tap-label text-[11px] sm:text-xs font-extrabold tracking-[0.24em] text-foreground/90">TAP TO EARN</span>
-              <span className="home-tap-caption text-[9px] sm:text-[10px] font-semibold tracking-[0.16em] text-muted-foreground/80">ANYWHERE ON THIS PANEL</span>
+              <span className="home-tap-label text-[11px] sm:text-xs font-extrabold tracking-[0.24em] text-foreground/90">
+                TAP TO EARN
+              </span>
+              <span className="home-tap-caption text-[9px] sm:text-[10px] font-semibold tracking-[0.16em] text-muted-foreground/80">
+                ANYWHERE ON THIS PANEL
+              </span>
             </div>
           </div>
 
