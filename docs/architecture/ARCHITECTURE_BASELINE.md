@@ -40,8 +40,8 @@ The inspected `src/lib/game.functions.ts` flow currently:
 2. Loads the player's `player_states/{uid}` document and, where applicable, a corporation document.
 3. Constructs a game context and invokes game-domain functions such as `tick`, `apply`, and corporation actions.
 4. Opens a Firestore `runTransaction` from the Firebase client SDK.
-5. Checks the player's version for optimistic concurrency and checks a bounded set of recent action keys for duplicate delivery.
-6. Pre-reads username and limited-stock documents before queuing transaction writes.
+5. Checks the player's version and, when a corporation is included, its version for optimistic concurrency; it also checks a bounded set of recent action keys for duplicate delivery.
+6. Pre-reads username, limited-stock, and corporation documents before queuing transaction writes.
 7. Writes player state, a minimal `public_players/{uid}` ranking projection, corporation state and its `public_corporations/{corpId}` projection, ledger records, and collectible stock counters in that transaction.
 
 The transaction path now rejects failed commits as failures and does not treat a timed-out/failed initial read as an absent save. Achievement evaluation is performed once at the combined tick/action boundary. These are integrity and efficiency improvements; they do not change the fact that the action function is client-executed.
