@@ -251,9 +251,8 @@ function EmpirePage() {
 
         {tab === "market" && (
           <div className="space-y-3 px-1">
-            <p className="text-xs text-muted-foreground px-1">
-              Fixed catalogue · every company is available from day one. Catalogue data is shared;
-              ownership is yours.
+            <p className="px-1 text-[11px] text-muted-foreground">
+              Browse available companies. Select a listing for full financial details.
             </p>
             {[...COMPANIES]
               .sort((a, b) => a.price - b.price)
@@ -261,32 +260,23 @@ function EmpirePage() {
                 <Card
                   key={d.id}
                   onClick={() => setDetail(d)}
-                  className="flex gap-4 p-4 hover:border-primary/40 transition-colors"
+                  className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:border-primary/40"
                 >
                   <BuildingSprite
                     businessDefId={d.id}
                     fit="cover"
-                    className="game-art h-20 w-24 shrink-0 rounded-xl bg-gradient-to-br from-primary/15 via-muted/30 to-card border border-primary/30 shadow-xs"
+                    className="game-art h-14 w-16 shrink-0 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/15 via-muted/30 to-card shadow-xs"
                   />
-                  <div className="flex min-w-0 flex-1 flex-col justify-between">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold">{d.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {d.industry} · {d.model}
-                        </div>
-                      </div>
-                      <div className="num shrink-0 whitespace-nowrap text-right font-semibold text-gain">
-                        {money(d.price)}
-                      </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{d.name}</div>
+                    <div className="truncate text-[10px] text-muted-foreground">{d.industry}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      Base revenue <span className="num font-semibold text-gain">{money(d.revenue)}/h</span>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <Pill tone="primary">Business wallet</Pill>
-                      <Pill>
-                        {d.offlineEligible ? `Offline ${d.offlineMaxHours}h` : "No offline income"}
-                      </Pill>
-                      <Pill>{d.minStaff ? `Needs ${d.minStaff} staff` : "No staff needed"}</Pill>
-                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="num text-sm font-bold text-foreground">{money(d.price)}</div>
+                    <div className="text-[10px] text-muted-foreground">View details</div>
                   </div>
                 </Card>
               ))}
