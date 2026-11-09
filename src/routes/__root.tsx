@@ -1,4 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { App as NativeApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import {
   Outlet,
   Link,
@@ -146,7 +148,32 @@ function RootComponent() {
       router.invalidate();
       if (user) queryClient.invalidateQueries();
     });
-    return () => unsubscribe();
+
+    let active = true;
+    let removeBackButtonListener: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void NativeApp.addListener("backButton", ({ canGoBack }) => {
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          void NativeApp.exitApp();
+        }
+      }).then((listener) => {
+        if (active) {
+          removeBackButtonListener = () => {
+            void listener.remove();
+          };
+        } else {
+          void listener.remove();
+        }
+      });
+    }
+
+    return () => {
+      active = false;
+      unsubscribe();
+      removeBackButtonListener?.();
+    };
   }, [router, queryClient]);
 
   return (
