@@ -29,19 +29,16 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Generate Android project
+      - name: Build web application
+        run: bun run build
+
+      - name: Generate Android project and sync assets
         run: |
           if [ ! -d android ]; then
             bunx cap add android
           fi
           bunx cap sync android
           chmod +x android/gradlew
-
-      - name: Build web application
-        run: bun run build
-
-      - name: Sync packaged web assets
-        run: bunx cap sync android
 
       - name: Compile debug APK
         working-directory: android
