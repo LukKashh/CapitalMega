@@ -93,7 +93,7 @@ if (!prerenderSucceeded) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0b0b12" />
     <title>Capitalfortune</title>
-    <meta name="description" content="Wealth & Business simulator tycoon with cloud save and cooperative corporations powered by Firebase Firestore" />
+    <meta name="description" content="Wealth & Business simulator tycoon with cloud save and cooperative corporations powered by Supabase" />
     <meta property="og:title" content="Capitalfortune" />
     <meta property="og:description" content="Wealth & Business simulator tycoon with cloud save and cooperative corporations powered by Firebase Firestore" />
     <meta property="og:type" content="website" />
