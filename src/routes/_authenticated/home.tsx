@@ -264,20 +264,19 @@ function HomePage() {
                 +{money(value)}
               </div>
 
-              {/* Upward Floating Small Coin with Burst Ring & Sparkles */}
-              <div className="float-small-coin relative">
+              {/* Reward coin launches from the impact with fluid particle wake. */}
+              <div className="float-small-coin home-reward-coin relative">
                 <img
                   src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png"
                   alt=""
-                  className="h-7 w-7 sm:h-8 sm:w-8 object-contain drop-shadow-[0_0_10px_rgba(250,204,21,0.9)]"
+                  draggable={false}
+                  className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
                 />
-                {/* Burst Ring Expanding */}
-                <div className="coin-burst-ring absolute inset-0 rounded-full border-2 border-gold/90" />
-                {/* 4 Sparkle Particles Bursting Outward */}
-                <div className="burst-sparkle burst-sparkle-1" />
-                <div className="burst-sparkle burst-sparkle-2" />
-                <div className="burst-sparkle burst-sparkle-3" />
-                <div className="burst-sparkle burst-sparkle-4" />
+                <span className="home-reward-trail" />
+                <span className="home-reward-particle home-reward-particle-a" />
+                <span className="home-reward-particle home-reward-particle-b" />
+                <span className="home-reward-particle home-reward-particle-c" />
+                <span className="home-reward-particle home-reward-particle-d" />
               </div>
             </div>
           ))}
