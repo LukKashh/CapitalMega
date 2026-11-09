@@ -3,6 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInAnonymously,
@@ -13,6 +14,8 @@ import {
 import { getFirestore, doc, getDocFromServer } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, listAll } from "firebase/storage";
 import firebaseConfig from "../../firebase-applet-config.json";
+import { Capacitor } from "@capacitor/core";
+import { SocialLogin } from "@capgo/capacitor-social-login";
 
 // Initialize Firebase app singleton
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -90,7 +93,45 @@ if (typeof window !== "undefined") {
 }
 
 // Authentication Helpers
+let nativeGoogleInitialization: Promise<void> | null = null;
+
+async function initializeNativeGoogleSignIn() {
+  if (!nativeGoogleInitialization) {
+    nativeGoogleInitialization = SocialLogin.initialize({
+      google: {
+        webClientId: firebaseConfig.oAuthClientId,
+        mode: "online",
+        skipAuthOnlyAuthorizationAfterSignIn: true,
+      },
+    }).catch((error) => {
+      nativeGoogleInitialization = null;
+      throw error;
+    });
+  }
+  return nativeGoogleInitialization;
+}
+
 export async function signInWithGoogle() {
+  if (Capacitor.isNativePlatform()) {
+    if (!firebaseConfig.oAuthClientId) {
+      throw new Error("Google sign-in is not configured: missing OAuth web client ID.");
+    }
+
+    await initializeNativeGoogleSignIn();
+    const response = await SocialLogin.login({
+      provider: "google",
+      options: {},
+    });
+    const idToken = response.result?.idToken;
+
+    if (!idToken) {
+      throw new Error("Google sign-in did not return an ID token. Check the Android OAuth client configuration.");
+    }
+
+    const credential = GoogleAuthProvider.credential(idToken);
+    return signInWithCredential(auth, credential);
+  }
+
   const provider = new GoogleAuthProvider();
   return signInWithPopup(auth, provider);
 }
