@@ -41,7 +41,7 @@ function bankBrand(bankId: string) {
   };
 }
 
-export function BankingView({ bankFilterId }: { bankFilterId?: string } = {}) {
+export function BankingView({ bankFilterId, initialSection = "overview", sectionLock = false }: { bankFilterId?: string; initialSection?: "overview" | "institutions" | "accounts" | "payments" | "loans" | "services" | "activity"; sectionLock?: boolean } = {}) {
   const { data } = useGame();
   const { run, pending } = useAct();
   const now = useNow(data?.offset ?? 0);
@@ -55,7 +55,7 @@ export function BankingView({ bankFilterId }: { bankFilterId?: string } = {}) {
   >("personal");
   const [bankAppTab, setBankAppTab] = useState<
     "overview" | "institutions" | "accounts" | "payments" | "loans" | "services" | "activity"
-  >("overview");
+  >(initialSection);
 
   const accounts = useMemo(() => data?.state?.bankAccounts || {}, [data?.state?.bankAccounts]);
 
