@@ -40,14 +40,11 @@ type PopItem = {
 
 function HomePage() {
   const { data } = useGame();
-  const p = useMemo(() => (data ? personalMods(data.state) : null), [data?.state]);
-  const cm = useMemo(() => (data ? corpMods(data.corp) : null), [data?.corp]);
+  const p = useMemo(() => (data ? personalMods(data.state) : null), [data]);
+  const cm = useMemo(() => (data ? corpMods(data.corp) : null), [data]);
   const value = useMemo(
-    () =>
-      data && p && cm
-        ? clickBase(data.state.clicker.level) * mult("clickPct", p, cm)
-        : 0,
-    [data?.state?.clicker.level, p, cm],
+    () => (data && p && cm ? clickBase(data.state.clicker.level) * mult("clickPct", p, cm) : 0),
+    [data, p, cm],
   );
   const opt = useOptimisticTaps(data, value);
   const { tap, buffer } = useClicker();
