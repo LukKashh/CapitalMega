@@ -1,0 +1,1 @@
+// Deployed game-action Edge Function entrypoint; canonical source is deployed to the connected Supabase project.
