@@ -791,14 +791,18 @@ export function netWorth(s: PlayerState, now: number) {
     liabilities += o.liabilities;
   }
   let stocks = 0;
+  const stockDefinitions = stocksNow(now).map;
+  const currentStockTick = stockTick(now);
   for (const [k, h] of Object.entries(s.stocks.holdings)) {
-    const d = stocksNow(now).map[k];
-    if (d) stocks += h.qty * stockPriceAtTick(d, stockTick(now));
+    const definition = stockDefinitions[k];
+    if (definition) stocks += h.qty * stockPriceAtTick(definition, currentStockTick);
   }
   let crypto = 0;
+  const cryptoDefinitions = cryptoNow(now).map;
+  const currentCryptoTick = cryptoTick(now);
   for (const [k, h] of Object.entries(s.crypto.holdings)) {
-    const d = cryptoNow(now).map[k];
-    if (d) crypto += h.qty * cryptoPriceAtTick(d, cryptoTick(now));
+    const definition = cryptoDefinitions[k];
+    if (definition) crypto += h.qty * cryptoPriceAtTick(definition, currentCryptoTick);
   }
   let property = 0;
   for (const pr of Object.values(s.properties)) property += propertyValue(pr);
@@ -998,7 +1002,9 @@ export function tick(c: Ctx) {
     if (report.lines.length || report.rent || report.rp) s.lastOffline = report;
   }
   snapshot(c);
-  checkAchievements(c);
+  // Achievement evaluation is orchestrated once after tick + action processing
+  // by the persistence adapter. Running it here as well would duplicate the
+  // full achievement and net-worth scans on every player action.
 }
 
 function snapshot(c: Ctx) {
@@ -1665,7 +1671,7 @@ export function apply(c: Ctx, a: Action) {
     }
   }
   if (!Number.isFinite(s.cash) || s.cash < -1e-6) throw new GameError("Insufficient funds");
-  checkAchievements(c);
+  // Achievement evaluation is performed once by the action-processing boundary.
 }
 
 function applyBank(c: Ctx, a: BankAction) {

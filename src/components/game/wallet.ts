@@ -1,7 +1,7 @@
 import type { OwnedCompany, PlayerState } from "@/game/types";
 
 /** Display refresh for temporary wallets (ms). Display-only; the server stays authoritative. */
-export const WALLET_REFRESH_MS = 250;
+export const WALLET_REFRESH_MS = 1_000;
 
 /** Live estimate of a company's business wallet: stored amount plus accrual since the last server tick, at exactly the hourly net rate. */
 export function liveCompanyWallet(

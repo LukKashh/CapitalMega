@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Menu, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPlayerTier } from "@/components/game/art";
@@ -40,17 +40,20 @@ type PopItem = {
 
 function HomePage() {
   const { data } = useGame();
-  const opt = useOptimisticTaps(data);
+  const p = useMemo(() => (data ? personalMods(data.state) : null), [data]);
+  const cm = useMemo(() => (data ? corpMods(data.corp) : null), [data]);
+  const value = useMemo(
+    () => (data && p && cm ? clickBase(data.state.clicker.level) * mult("clickPct", p, cm) : 0),
+    [data, p, cm],
+  );
+  const opt = useOptimisticTaps(data, value);
   const { tap, buffer } = useClicker();
   const { openMenu } = useMenu();
   const [pops, setPops] = useState<PopItem[]>([]);
   const popId = useRef(0);
   const lastRewardEffectAt = useRef(0);
-  if (!data) return <Loading />;
+  if (!data || !p || !cm) return <Loading />;
   const s = data.state;
-  const p = personalMods(s);
-  const cm = corpMods(data.corp);
-  const value = clickBase(s.clicker.level) * mult("clickPct", p, cm);
   const req = clickReq(s.clicker.level);
   const cap = clickCap(s, p);
   const maxed = s.clicker.level >= BALANCE.clicker.hardCap;

@@ -9,23 +9,20 @@ import {
   limit,
   runTransaction,
 } from "firebase/firestore";
-import { apply, newPlayer, tick, gainXp, netWorth, type Action, type Ctx } from "@/game/engine";
 import {
-  applyCorp,
-  corpMods,
-  corpTick,
-  reconcileMembership,
-  facilityCost,
-  type CorpAction,
-} from "@/game/corp";
-import {
-  RANK_PERMS,
-  CORP_FACILITIES,
-  CORP_DEPARTMENTS,
-  CORP_BUSINESSES,
-  type Rank,
-} from "@/game/config";
+  apply,
+  newPlayer,
+  tick,
+  gainXp,
+  netWorth,
+  checkAchievements,
+  type Action,
+  type Ctx,
+} from "@/game/engine";
+import { applyCorp, corpMods, corpTick, reconcileMembership, type CorpAction } from "@/game/corp";
+import { RANK_PERMS, type Rank } from "@/game/config";
 import { GameError, type CorpState, type PlayerState } from "@/game/types";
+import { corporationLeaderboardEntry, type CorporationLeaderboardEntry } from "@/game/leaderboard";
 
 type AnyAction = Action | CorpAction;
 const CORP_TYPES = new Set([
@@ -50,20 +47,12 @@ const CORP_TYPES = new Set([
 ]);
 
 async function loadCorp(id: string) {
-  const ref = doc(db, "corporations", id);
-  try {
-    const snapPromise = getDoc(ref);
-    const timeoutPromise = new Promise<null>((r) => setTimeout(() => r(null), 1500));
-    const snap = await Promise.race([snapPromise, timeoutPromise]);
-    if (!snap || !snap.exists()) return null;
-    const data = snap.data();
-    const st = data.state as CorpState;
-    if (data.dissolved) st.dissolved = true;
-    return { state: st, version: (data.version as number) ?? 0 };
-  } catch (err) {
-    console.warn("Firestore loadCorp fallback:", err);
-    return null;
-  }
+  const snap = await getDoc(doc(db, "corporations", id));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  const st = data.state as CorpState;
+  if (data.dissolved) st.dissolved = true;
+  return { state: st, version: (data.version as number) ?? 0 };
 }
 
 function corpView(c: CorpState | null, uid: string) {
@@ -101,22 +90,20 @@ async function run(
   action: AnyAction | null,
   _key: string,
 ) {
+  if (action && !/^[A-Za-z0-9_-]{1,128}$/.test(_key)) {
+    throw new Error("Invalid action idempotency key");
+  }
   let lastErr: unknown;
   for (let attempt = 0; attempt < 4; attempt++) {
     const now = Date.now(); // server time is authoritative
     const playerRef = doc(db, "player_states", uid);
-    let row: { state: PlayerState; version: number } | null = null;
-    try {
-      const snapPromise = getDoc(playerRef);
-      const timeoutPromise = new Promise<null>((r) => setTimeout(() => r(null), 1500));
-      const snap = await Promise.race([snapPromise, timeoutPromise]);
-      if (snap && snap.exists()) {
-        const d = snap.data();
-        row = { state: d.state as PlayerState, version: (d.version as number) ?? 0 };
-      }
-    } catch (err) {
-      console.warn("Firestore getDoc fallback:", err);
-    }
+    const snap = await getDoc(playerRef);
+    const row = snap.exists()
+      ? {
+          state: snap.data().state as PlayerState,
+          version: (snap.data().version as number) ?? 0,
+        }
+      : null;
 
     const state: PlayerState = row ? row.state : newPlayer(now, "GuestTycoon");
     const version = row ? row.version : 0;
@@ -127,14 +114,14 @@ async function run(
 
     // accepted applications
     if (!state.corp.id && state.corp.pending.length) {
-      for (const pid of state.corp.pending) {
-        const pc = await loadCorp(pid);
-        if (pc && !pc.state.dissolved && pc.state.members[uid]) {
-          state.corp.id = pid;
-          state.corp.joinedAt = now;
-          own = pc;
-          break;
-        }
+      const pendingCorporations = await Promise.all(state.corp.pending.map((pid) => loadCorp(pid)));
+      const acceptedIndex = pendingCorporations.findIndex(
+        (pc) => !!pc && !pc.state.dissolved && !!pc.state.members[uid],
+      );
+      if (acceptedIndex >= 0) {
+        state.corp.id = state.corp.pending[acceptedIndex]!;
+        state.corp.joinedAt = now;
+        own = pendingCorporations[acceptedIndex]!;
       }
       state.corp.pending = state.corp.id ? [] : state.corp.pending;
     }
@@ -189,11 +176,10 @@ async function run(
           }
         }
         if (a.type === "corpDecideApplication") {
-          const apSnap = await getDoc(doc(db, "player_states", a.uid));
+          const apSnap = await getDoc(doc(db, "public_players", a.uid));
           if (apSnap.exists()) {
             const apData = apSnap.data();
-            const apState = apData.state as PlayerState;
-            extra.inviteeFree = !apState.corp.id;
+            extra.inviteeFree = !apData.corpId;
           }
         }
         const res = applyCorp(ctx, uid, a, target?.state ?? null, extra);
@@ -209,37 +195,84 @@ async function run(
       } else if (action) {
         apply(ctx, action as Action);
       }
+      checkAchievements(ctx);
     } catch (e) {
       if (e instanceof GameError) return { ok: false as const, error: e.message };
       throw e;
     }
 
-    // Atomic transaction commit to Firestore
+    // Atomic transaction commit to Firestore. Complete every transaction read
+    // before issuing the first write; Firestore rejects read-after-write flows.
     try {
-      await runTransaction(db, async (tx) => {
+      const commit = await runTransaction(db, async (tx) => {
         const curSnap = await tx.get(playerRef);
+        const currentData = curSnap.exists() ? curSnap.data() : null;
+        const recentActionKeys = (currentData?.recentActionKeys as string[] | undefined) ?? [];
+        if (action && recentActionKeys.includes(_key)) {
+          return {
+            duplicate: true as const,
+            state: (currentData?.state ?? state) as PlayerState,
+          };
+        }
         if (curSnap.exists()) {
-          const curVer = (curSnap.data().version as number) ?? 0;
+          const curVer = (currentData?.version as number) ?? 0;
           if (curVer !== version) {
             throw new Error("conflict: concurrent state change");
           }
         }
 
-        if (state.username && state.username !== "GuestTycoon" && state.username !== "Player") {
-          const lower = state.username.trim().toLowerCase();
-          const uRef = doc(db, "usernames", lower);
-          const uSnap = await tx.get(uRef);
-          if (uSnap.exists() && uSnap.data().userId !== uid) {
-            // If taken by another user, assign a unique suffix instead of failing
+        const usernameLower =
+          state.username && state.username !== "GuestTycoon" && state.username !== "Player"
+            ? state.username.trim().toLowerCase()
+            : null;
+        const usernameRef = usernameLower ? doc(db, "usernames", usernameLower) : null;
+        const usernameSnap = usernameRef ? await tx.get(usernameRef) : null;
+        const stockRefs = ctx.stock.map((s) => doc(db, "collectible_stock", s.id));
+        const stockSnaps = await Promise.all(stockRefs.map((ref) => tx.get(ref)));
+        const corpRef = corpOut ? doc(db, "corporations", corpOut.id) : null;
+        const corpSnap = corpRef ? await tx.get(corpRef) : null;
+
+        if (corpOut && corpSnap) {
+          const currentCorpVersion = corpSnap.exists()
+            ? ((corpSnap.data().version as number) ?? 0)
+            : null;
+          const isNewCorporation = !corpSnap.exists() && corpOut.version === 0;
+          if (!isNewCorporation && currentCorpVersion !== corpOut.version) {
+            throw new Error("conflict: concurrent corporation state change");
+          }
+        }
+
+        // Validate limited-edition stock before writes begin.
+        for (let i = 0; i < ctx.stock.length; i++) {
+          const item = ctx.stock[i]!;
+          const stockSnap = stockSnaps[i]!;
+          const curSold = stockSnap.exists() ? ((stockSnap.data().sold as number) ?? 0) : 0;
+          if (item.limit && curSold + item.qty > item.limit) {
+            throw new Error("sold_out: This limited edition is sold out");
+          }
+        }
+
+        if (usernameLower && usernameRef) {
+          if (usernameSnap?.exists() && usernameSnap.data().userId !== uid) {
+            // Keep the existing collision fallback, but only after the original
+            // registry document has been read inside this transaction.
             state.username = `${state.username}_${Math.floor(Math.random() * 9000 + 1000)}`;
           }
           const finalLower = state.username.trim().toLowerCase();
-          const finalURef = doc(db, "usernames", finalLower);
-          tx.set(finalURef, { username: finalLower, userId: uid, createdAt: now });
+          tx.set(doc(db, "usernames", finalLower), {
+            username: finalLower,
+            userId: uid,
+            createdAt: now,
+          });
         }
 
         const calculatedNw = Math.max(0, Math.round(netWorth(state, now).total));
-        tx.set(playerRef, {
+        const corpTag = own?.state
+          ? own.state.tag
+          : corpOut && !corpOut.dissolve
+            ? corpOut.state.tag
+            : null;
+        const playerRecord = {
           userId: uid,
           username: state.username || "Player",
           level: state.level || 1,
@@ -247,18 +280,28 @@ async function run(
           liquid: state.cash + state.reservedCash,
           title: state.profile?.title || "Aspiring Tycoon",
           avatar: state.profile?.avatar || "briefcase",
-          corpTag: own?.state
-            ? own.state.tag
-            : corpOut && !corpOut.dissolve
-              ? corpOut.state.tag
-              : null,
+          corpTag,
           version: version + 1,
           state: state as unknown as Record<string, unknown>,
           updatedAt: now,
+          recentActionKeys: action
+            ? [...recentActionKeys.filter((key) => key !== _key), _key].slice(-64)
+            : recentActionKeys.slice(-64),
+        };
+        tx.set(playerRef, playerRecord);
+        // A deliberately small public projection replaces leaderboard reads of
+        // complete private player save documents.
+        tx.set(doc(db, "public_players", uid), {
+          userId: uid,
+          username: playerRecord.username,
+          level: playerRecord.level,
+          netWorth: playerRecord.netWorth,
+          corpTag,
+          corpId: state.corp.id || null,
+          updatedAt: now,
         });
 
-        if (corpOut) {
-          const corpRef = doc(db, "corporations", corpOut.id);
+        if (corpOut && corpRef) {
           tx.set(corpRef, {
             id: corpOut.id,
             name: corpOut.state.name,
@@ -269,6 +312,12 @@ async function run(
             dissolved: corpOut.dissolve,
             updatedAt: now,
           });
+          const publicCorpRef = doc(db, "public_corporations", corpOut.id);
+          if (corpOut.dissolve) {
+            tx.delete(publicCorpRef);
+          } else {
+            tx.set(publicCorpRef, corporationLeaderboardEntry(corpOut.id, corpOut.state));
+          }
         }
 
         for (const l of ctx.ledger) {
@@ -284,17 +333,25 @@ async function run(
           });
         }
 
-        for (const s of ctx.stock) {
-          const stockRef = doc(db, "collectible_stock", s.id);
-          const stockSnap = await tx.get(stockRef);
+        for (let i = 0; i < ctx.stock.length; i++) {
+          const item = ctx.stock[i]!;
+          const stockSnap = stockSnaps[i]!;
           const curSold = stockSnap.exists() ? ((stockSnap.data().sold as number) ?? 0) : 0;
-          if (s.limit && curSold + s.qty > s.limit) {
-            throw new Error("sold_out: This limited edition is sold out");
-          }
-          tx.set(stockRef, { itemId: s.id, sold: curSold + s.qty, updatedAt: now });
+          tx.set(stockRefs[i]!, { itemId: item.id, sold: curSold + item.qty, updatedAt: now });
         }
+
+        return { duplicate: false as const, state };
       });
 
+      if (commit.duplicate) {
+        return {
+          ok: true as const,
+          duplicate: true as const,
+          now,
+          state: commit.state,
+          corp: null,
+        };
+      }
       const finalCorp =
         state.corp.id && corpOut && !corpOut.dissolve && corpOut.id === state.corp.id
           ? corpOut.state
@@ -308,14 +365,13 @@ async function run(
         return { ok: false as const, error: "This limited edition is sold out" };
       if (msg.includes("player_username_unique"))
         return { ok: false as const, error: "That username is taken" };
-      if (action === null) {
-        // Read-only query: return local state gracefully even if Firestore transaction write failed
-        const finalCorp = state.corp.id && own && !own.state.dissolved ? own.state : null;
-        return { ok: true as const, now, state, corp: corpView(finalCorp, uid) };
-      }
-      console.warn("Firestore transaction write error:", txErr);
-      const finalCorp = state.corp.id && own && !own.state.dissolved ? own.state : null;
-      return { ok: true as const, now, state, corp: corpView(finalCorp, uid) };
+      console.warn("Firestore transaction commit failed:", txErr);
+      return {
+        ok: false as const,
+        error: action
+          ? "Action could not be saved. Please retry."
+          : "Your saved game could not be synchronized. Please retry.",
+      };
     }
   }
   throw new Error(`Busy, please retry (${String((lastErr as Error)?.message ?? "")})`);
@@ -411,127 +467,60 @@ export type LeaderboardEntry = {
   username: string;
   level: number;
   netWorth: number;
-  liquid: number;
-  title: string;
-  avatar: string;
   corpTag: string | null;
-  companiesCount: number;
-  propertiesCount: number;
-  achievementsCount: number;
-  updatedAt: number;
-  createdAt: number;
 };
 
-export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(
+  sort: "networth" | "experience" = "networth",
+): Promise<LeaderboardEntry[]> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Please sign in to continue");
   try {
-    const snaps = await getDocs(collection(db, "player_states"));
-    const now = Date.now();
-    const list: LeaderboardEntry[] = [];
-    snaps.docs.forEach((d) => {
+    const rankingField = sort === "experience" ? "level" : "netWorth";
+    const snaps = await getDocs(
+      query(collection(db, "public_players"), orderBy(rankingField, "desc"), limit(10)),
+    );
+    return snaps.docs.map((d) => {
       const data = d.data();
-      const st = data.state as PlayerState | undefined;
-      const nw =
-        typeof data.netWorth === "number" ? data.netWorth : st ? netWorth(st, now).total : 0;
-      const name = data.username || st?.username || "Anonymous Tycoon";
-      list.push({
+      return {
         userId: d.id,
-        username: name,
-        level: Number(data.level || st?.level || 1),
-        netWorth: Math.max(0, Math.round(nw)),
-        liquid: Number(data.liquid || (st ? st.cash + st.reservedCash : 0)),
-        title: data.title || st?.profile?.title || "Aspiring Tycoon",
-        avatar: data.avatar || st?.profile?.avatar || "briefcase",
-        corpTag: data.corpTag || (st?.corp?.id ? "CORP" : null),
-        companiesCount: st ? Object.keys(st.companies || {}).length : 0,
-        propertiesCount: st ? Object.keys(st.properties || {}).length : 0,
-        achievementsCount: st ? Object.keys(st.achievements || {}).length : 0,
-        updatedAt: Number(data.updatedAt || st?.lastTick || now),
-        createdAt: Number(st?.createdAt || now),
-      });
+        username: String(data.username || "Anonymous Tycoon"),
+        level: Number(data.level || 1),
+        netWorth: Math.max(0, Math.round(Number(data.netWorth) || 0)),
+        corpTag: (data.corpTag as string | null) ?? null,
+      };
     });
-    // Sort by total net worth descending
-    list.sort((a, b) => b.netWorth - a.netWorth);
-    return list;
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, "player_states");
+    handleFirestoreError(err, OperationType.LIST, "public_players");
   }
 }
 
-export type CorpLeaderboardEntry = {
-  id: string;
-  name: string;
-  tag: string;
-  level: number;
-  xp: number;
-  activity: number;
-  valuation: number;
-  treasury: number;
-  membersCount: number;
-};
+export type CorpLeaderboardEntry = CorporationLeaderboardEntry;
 
-export async function getCorporationLeaderboard(): Promise<CorpLeaderboardEntry[]> {
+export async function getCorporationLeaderboard(
+  sort: "activity" | "experience" | "valuation" = "activity",
+): Promise<CorpLeaderboardEntry[]> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Please sign in to continue");
   try {
-    const snaps = await getDocs(collection(db, "corporations"));
-    const list: CorpLeaderboardEntry[] = [];
-    snaps.docs.forEach((d) => {
-      const data = d.data();
-      if (data.dissolved) return;
-      const c = data.state as CorpState | undefined;
-      if (!c) return;
-
-      let upgradeSpend = 0;
-      for (const [facId, lvl] of Object.entries(c.facilities || {})) {
-        for (let i = 0; i < lvl; i++) {
-          upgradeSpend += facilityCost(facId, i);
-        }
-      }
-      for (const depId of Object.keys(c.departments || {})) {
-        const dDef = CORP_DEPARTMENTS.find((x) => x.id === depId);
-        if (dDef) upgradeSpend += dDef.cost;
-      }
-      for (const b of Object.values(c.businesses || {})) {
-        const bDef = CORP_BUSINESSES.find((x) => x.id === b.defId);
-        if (bDef) upgradeSpend += bDef.price;
-      }
-
-      let businessValuation = 0;
-      for (const b of Object.values(c.businesses || {})) {
-        const bDef = CORP_BUSINESSES.find((x) => x.id === b.defId);
-        if (bDef) businessValuation += bDef.price;
-      }
-      const holdingsBalance = (c.treasury || 0) + businessValuation;
-      const valuation = upgradeSpend + holdingsBalance;
-
-      let totalShifts = 0;
-      let totalContrib = 0;
-      for (const m of Object.values(c.members || {})) {
-        totalShifts += m.shifts || 0;
-        totalContrib += m.total || 0;
-      }
-      const activity =
-        totalShifts * 10 +
-        Math.floor(totalContrib / 1000) +
-        (c.completedObjectives?.length || 0) * 50;
-
-      list.push({
-        id: d.id,
-        name: c.name || "Corporation",
-        tag: c.tag || "CORP",
-        level: c.level || 1,
-        xp: c.xp || 0,
-        activity,
-        valuation,
-        treasury: c.treasury || 0,
-        membersCount: Object.keys(c.members || {}).length,
-      });
-    });
-    return list;
+    const rankingField = sort === "experience" ? "xp" : sort;
+    const snaps = await getDocs(
+      query(collection(db, "public_corporations"), orderBy(rankingField, "desc"), limit(10)),
+    );
+    return snaps.docs
+      .map((d) => d.data())
+      .filter((data) => !data.dissolved)
+      .map((data) => ({
+        id: String(data.id),
+        name: String(data.name || "Corporation"),
+        tag: String(data.tag || "CORP"),
+        level: Number(data.level || 1),
+        xp: Number(data.xp || 0),
+        activity: Number(data.activity || 0),
+        valuation: Number(data.valuation || 0),
+      }));
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, "corporations");
+    handleFirestoreError(err, OperationType.LIST, "public_corporations");
     return [];
   }
 }

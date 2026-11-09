@@ -54,6 +54,12 @@ Before coding the privileged adapter:
 
 **Migration note:** this phase changes the trust boundary. Preserve current player-save shape and action semantics. Map every current direct Firestore read/write and its UI consumer before changing rules. Migrate game actions and dependent reads behind the selected trusted boundary first; keep public leaderboard/profile data in an explicit limited projection. Tighten client rules only after the corresponding server path and read model are deployed and tested. Use compatibility wrappers only as a temporary migration aid; do not leave both client and server paths able to commit the same action.
 
+### Progress note — internal processing update (2026-11-09)
+
+The internal processing update implements part of this roadmap's integrity and read-model groundwork: transaction reads now precede writes, player and corporation versions are checked at commit, duplicate action keys are bounded and replay-safe, failed persistence returns failure, private player-save reads are owner/admin scoped, and minimal public leaderboard projections are maintained atomically.
+
+This does **not** complete Phase 1 or Phase 2. The game action path still executes through the Firebase client SDK; client-authoritative player saves, ledger creation, global stock writes, corporation authorization and private ledger reads remain to be moved behind a verified trusted backend. The production hosting runtime and server-only secret provisioning must be identified before implementing that boundary. See [Internal Processing Update](INTERNAL_PROCESSING_UPDATE.md) and [Architecture Baseline](ARCHITECTURE_BASELINE.md).
+
 ## Phase 2 — Unified financial transaction service
 
 **Priority: Critical**

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Building2, Clock } from "lucide-react";
 import { useAct, useGame, useNow } from "@/hooks/use-game";
 import { COMPANIES, type CompanyDef } from "@/game/config";
@@ -63,10 +63,10 @@ function EmpirePage() {
   const { run, pending } = useAct();
   const [tab, setTab] = useState<"owned" | "market" | "report">("owned");
   const [detail, setDetail] = useState<CompanyDef | null>(null);
-  if (!data) return <Loading />;
+  const p = useMemo(() => (data ? personalMods(data.state) : null), [data]);
+  const cm = useMemo(() => (data ? corpMods(data.corp) : null), [data]);
+  if (!data || !p || !cm) return <Loading />;
   const s = data.state;
-  const p = personalMods(s);
-  const cm = corpMods(data.corp);
   const owned = Object.values(s.companies);
   const econ = owned.map((o) => ({ o, e: companyEcon(o, p, cm, now) }));
   const totals = econ.reduce(

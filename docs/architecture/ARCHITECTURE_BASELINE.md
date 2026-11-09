@@ -40,8 +40,11 @@ The inspected `src/lib/game.functions.ts` flow currently:
 2. Loads the player's `player_states/{uid}` document and, where applicable, a corporation document.
 3. Constructs a game context and invokes game-domain functions such as `tick`, `apply`, and corporation actions.
 4. Opens a Firestore `runTransaction` from the Firebase client SDK.
-5. Checks the player's version for optimistic concurrency.
-6. Writes player state, corporation state, ledger records, and collectible stock counters in that transaction.
+5. Checks the player's version and, when a corporation is included, its version for optimistic concurrency; it also checks a bounded set of recent action keys for duplicate delivery.
+6. Pre-reads username, limited-stock, and corporation documents before queuing transaction writes.
+7. Writes player state, a minimal `public_players/{uid}` ranking projection, corporation state and its `public_corporations/{corpId}` projection, ledger records, and collectible stock counters in that transaction.
+
+The transaction path now rejects failed commits as failures and does not treat a timed-out/failed initial read as an absent save. Achievement evaluation is performed once at the combined tick/action boundary. These are integrity and efficiency improvements; they do not change the fact that the action function is client-executed.
 
 The game-action entry points are currently **ordinary imported functions**, not TanStack server functions. In particular, `src/hooks/use-game.tsx` imports and calls `getGame` and `gameAction` directly from `src/lib/game.functions.ts`; those functions use the browser Firebase client SDK. The global function middleware in `src/start.ts` applies to actual TanStack server-function calls and does not convert an ordinary imported function into a server endpoint. Therefore, the current gameplay action and persistence path is client-executed.
 
@@ -79,9 +82,11 @@ The current `/ledger/{ledgerId}` rule permits any signed-in user to create a str
 
 ### 5.3 Player-state and ledger read scope
 
-The current rules allow any signed-in user to read/list player-state documents and ledger documents. This is broader than private per-player saves and private financial history.
+The internal processing update restricts ordinary `player_states/{uid}` reads to the owner (and administrators); listing the private collection is administrator-only. Public ranking data is served through `public_players/{uid}`, which contains only the fields required for the player leaderboard and corporation application checks. Firestore rules tie this projection to the private player document written in the same transaction.
 
-**Required direction:** define the intended public profile/leaderboard projection separately from private player state and financial records. Restrict private reads to the owner and explicitly authorized administrative workflows.
+The `ledger` collection remains broader: signed-in users can still list ledger documents and create structurally valid entries. The public player projection does not resolve that separate financial-history exposure.
+
+**Required direction:** move ledger creation and private ledger reads behind the trusted command boundary, then scope each user's financial history to the authorized owner. Keep public leaderboard/profile data separate from private saves.
 
 ### 5.4 Corporation and global stock writes
 
@@ -162,7 +167,19 @@ Use existing paths until an extraction has a clear benefit and can be validated.
 9. Private saves and financial records are not exposed through public leaderboard/profile reads.
 10. Persisted-state changes preserve existing saves through explicit versioning and tested defaults/migrations.
 
-## 9. Non-goals for this baseline
+## 9. Internal processing update (2026-11-09)
+
+The branch `perf/internal-processing-audit-2026-11-09` adds the following incremental changes:
+
+- Firestore transaction reads are completed before writes, action commits fail honestly, and the latest 64 action keys are retained for deduplication.
+- Private player-save reads are owner/admin scoped; small public player and corporation ranking projections replace full-state leaderboard reads.
+- Leaderboard queries are ordered and capped at ten rows; only the active category refreshes.
+- Game-state synchronization is less frequent, pending corporation lookups are parallelized, achievement evaluation is centralized once per processing cycle, and live wallet rerenders are reduced.
+- Corporation ranking aggregation is isolated in a pure `src/game/` module with tests.
+
+**Not complete:** the game command path still executes through the Firebase client SDK. Client-authoritative player saves, ledger creation, global stock writes, and corporation mutation permissions remain trust-boundary gaps. The production runtime and secret provisioning prerequisites in Sections 5.5–5.7 must be resolved before a trusted server command path can be implemented safely. See [Internal Processing Update](INTERNAL_PROCESSING_UPDATE.md) for implementation details and rollout notes.
+
+## 10. Non-goals for this baseline
 
 - No game mechanic or economy balancing changes.
 - No new catalogue entries, financial rates, fees, limits, or progression rules.
