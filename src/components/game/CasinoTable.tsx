@@ -14,8 +14,8 @@ type G = typeof GAMES[number];
 const fmt=(n:number)=>n.toLocaleString("en-US",{maximumFractionDigits:2});
 const EMPTY:CasinoState={chips:0,round:0,active:null,last:null,stats:{wagered:0,won:0,rounds:0,biggestWin:0}};
 
-export function CasinoTable() {
- const {data}=useGame(); const [game,setGame]=useState<G>("Roulette");
+export function CasinoTable({ initialGame = "Roulette" }: { initialGame?: G }) {
+ const {data}=useGame(); const [game,setGame]=useState<G>(initialGame);
  if(!data)return <Loading/>;
  const cs=data.state.casino??EMPTY;
  const active=cs.active?({blackjack:"Blackjack",mines:"Mines",hilo:"Hi-Lo"} as const)[cs.active.game]:null;
