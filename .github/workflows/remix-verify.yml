@@ -1,0 +1,45 @@
+name: Remix verification
+
+on:
+  push:
+    branches:
+      - remix/supabase-android-independent
+  pull_request:
+    branches:
+      - remix/supabase-android-independent
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remix-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test -- --reporter=dot
+      - name: Production build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: capital-fortune-web-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
