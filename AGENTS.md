@@ -1,44 +1,63 @@
-<!-- LOVABLE:BEGIN -->
+# Capital Fortune — Repository Instructions
 
-> [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
+## Project identity
 
-## What Lovable manages
+- This repository contains the **Capital Fortune** application associated with the Google AI Studio Build project.
+- The application is a React/TypeScript web app using TanStack Start and Vite.
+- Do not describe the project as a Lovable-originated app. Some Lovable-named compatibility packages and integration files remain from earlier project tooling; their presence alone does not establish the current source platform.
+- Do not remove or replace those compatibility files until all imports, runtime paths, and deployment dependencies have been traced.
 
-Rules outside this block are the project's own. Change the pieces below in
-Lovable, not by hand. With the [Lovable MCP](https://mcp.lovable.dev)
-connected, `send_message` asks Lovable to do it; otherwise ask the user to
-use the editor.
+## Architecture map
 
-- **Database.** Do not add or edit `supabase/migrations/` or `drizzle/`.
-  Ask Lovable to change the schema.
-- **Generated files.** Do not edit a file whose header says it is automatically
-  generated.
-- **AI gateway.** Keep model calls on Lovable's gateway, and keep
-  `LOVABLE_API_KEY` out of browser code.
-- **Connectors.** Lovable provides native connectors. `list_connectors` shows
-  which are enabled; `add_connector` only returns the dashboard link. When a
-  connector is enabled, calls go through the connector gateway and need
-  `LOVABLE_API_KEY`. When Lovable does not provide one, users can bring their
-  own key and store it in Secrets.
-- **Secrets.** Lovable manages them. Do not put secret values in the repo.
+- `src/game/`: game domain types, rules, economy, simulation, progression, markets, corporations, banking, casino, and related tests.
+- `src/routes/`: TanStack Start file-based routes. `src/routeTree.gen.ts` is generated; never edit it manually.
+- `src/components/game/`: game-specific screens and presentation components.
+- `src/components/ui/`: reusable UI primitives.
+- `src/lib/`: application services, game actions, Firebase setup, formatting, and shared utilities.
+- `src/context/` and `src/hooks/`: UI context and React hooks.
+- `src/integrations/`: provider-specific integration code. Inspect actual call sites before changing providers.
+- `public/assets/`: runtime-served game art, textures, and other static assets.
+- `docs/`: implementation specifications and repository documentation.
+- `drizzle/`: retained migration and metadata artifacts. Do not assume these define the active player-save path without tracing their use.
+- `.aistudio/artifacts/`: AI Studio-generated planning and supporting artifacts; not application runtime source.
 
-<!-- LOVABLE:END -->
+## Data and security rules
 
-## Project rules
+- The current game action path in `src/lib/game.functions.ts` uses Firebase Authentication and Cloud Firestore. Trace the full action and transaction flow before changing persistence or authorization.
+- Firebase initialization is in `src/lib/firebase.ts`; the project configuration is read from `firebase-applet-config.json`.
+- Treat `firestore.rules` and `firebase-blueprint.json` as security-sensitive project configuration. Update and test rules when changing the shape or access pattern of Firestore data.
+- Supabase integration files are present. Do not assume they are the primary game-state store, and do not introduce a competing persistence system without an explicit architecture decision.
+- Never put service-role credentials, private signing keys, or other secrets in browser code or committed files.
+- Do not weaken authorization to make a feature appear functional.
 
-- Game logic lives in pure modules under `src/game/` (config, engine, corp, market, collectibles, achievements); UI never computes authoritative balances. Why: one testable, configurable source of truth.
-- All balance numbers live in `src/game/config.ts` (and catalogue builders); do not hard-code game values in UI. Why: spec requires configurable balancing.
-- Every state change goes through `gameAction` in `src/lib/game.functions.ts`, which ticks with server time and commits via the `commit_game_action` RPC (optimistic version + idempotency key + ledger, one transaction). Clients only have SELECT on their own rows. Why: server-authoritative economy.
-- Player and corporation state are JSONB documents (`player_states`, `corporations`); cross-player effects (kicks, accepted applications, objective XP) are reconciled lazily on the affected player's next load. Why: avoids writing other players' rows.
-- Markets and collectible valuations are deterministic functions of time (`src/game/rng.ts`), so prices are global, continue offline and are never influenced by player trades.
-- tsconfig has `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `noPropertyAccessFromIndexSignature` disabled to keep the catalogue-heavy engine readable.
+## Game implementation rules
 
-- Presentation artwork is mapped through `src/components/game/art.ts` and CDN asset pointers; use shared game controls and semantic theme tokens for all screen skins. Why: keeps the reference-led redesign consistent without coupling art to authoritative game configuration.
-- Casino outcomes come from a per-round seed HMAC(server secret, user:round) computed in `game.functions.ts` and never stored; open rounds keep only revealed info in state. Why: players can read their own save row, so hidden cards/mines must not live there.
+- Keep game calculations and domain rules in `src/game/`; UI components should present state and dispatch actions rather than independently inventing economic outcomes.
+- Preserve existing save compatibility. Add safe defaults or migrations when persisted state changes.
+- Reuse existing types, configuration, action paths, and UI conventions before introducing new abstractions.
+- Do not invent mechanics, balance values, catalogue items, fees, rates, probabilities, or progression requirements that have not been specified.
+- Add regression tests for changes to game rules, banking, markets, casino outcomes, assets, and persistence behavior where applicable.
+
+## Generated files and assets
+
+- Do not manually edit `src/routeTree.gen.ts`.
+- Respect generated-file headers in integration code and migration metadata.
+- Keep source artwork and runtime assets in their established locations. Update manifests or asset mappings when adding or replacing assets.
+- Do not commit temporary exports, local build output, dependency folders, or private environment files.
+
+## Validation
+
+Use the repository's Bun lockfile and scripts:
+
+```bash
+bun install --frozen-lockfile
+bun run test
+bun run lint
+bun run build
+```
+
+Do not change package managers or regenerate the lockfile without a specific dependency-management reason.
+
+## Google AI Studio synchronization
+
+The repository is linked to a Google AI Studio Build project. Avoid making conflicting edits to the same files in AI Studio and GitHub before synchronizing. Review diffs and resolve conflicts deliberately. Keep the default branch in a working state.
