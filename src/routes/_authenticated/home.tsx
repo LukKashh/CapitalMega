@@ -38,13 +38,23 @@ type PopItem = {
   duration: number;
 };
 
+type LiquidRipple = {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  duration: number;
+};
+
 function HomePage() {
   const { data } = useGame();
   const opt = useOptimisticTaps(data);
   const { tap, buffer } = useClicker();
   const { openMenu } = useMenu();
   const [pops, setPops] = useState<PopItem[]>([]);
+  const [ripples, setRipples] = useState<LiquidRipple[]>([]);
   const popId = useRef(0);
+  const rippleId = useRef(0);
   if (!data) return <Loading />;
   const s = data.state;
   const p = personalMods(s);
@@ -69,27 +79,39 @@ function HomePage() {
     return { id, x, y, dx, dy, wave, rotStart, rotEnd, scale, duration };
   };
 
-  const handleFramePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
+  const triggerTapFeedback = (x: number, y: number, width: number, height: number) => {
     tap();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(20, Math.min(rect.width - 20, e.clientX - rect.left));
-    const y = Math.max(20, Math.min(rect.height - 20, e.clientY - rect.top));
+
     const pop = createPop(x, y);
     setPops((list) => [...list.slice(-24), pop]);
     setTimeout(() => setPops((list) => list.filter((q) => q.id !== pop.id)), pop.duration + 50);
+
+    // Size each wave to reach the farthest corner of the live tap surface.
+    const farthestCorner = Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
+    const ripple: LiquidRipple = {
+      id: ++rippleId.current,
+      x,
+      y,
+      size: Math.max(260, farthestCorner * 2.12),
+      duration: 1320,
+    };
+    setRipples((list) => [...list.slice(-11), ripple]);
+    setTimeout(() => setRipples((list) => list.filter((item) => item.id !== ripple.id)), ripple.duration + 100);
+  };
+
+  const handleFramePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    triggerTapFeedback(x, y, rect.width, rect.height);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      tap();
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = rect.width / 2;
-      const y = rect.height / 2;
-      const pop = createPop(x, y);
-      setPops((list) => [...list.slice(-24), pop]);
-      setTimeout(() => setPops((list) => list.filter((q) => q.id !== pop.id)), pop.duration + 50);
+      triggerTapFeedback(rect.width / 2, rect.height / 2, rect.width, rect.height);
     }
   };
 
@@ -181,11 +203,32 @@ function HomePage() {
           <div className="pointer-events-none absolute bottom-3 left-3 h-3.5 w-3.5 border-b-2 border-l-2 border-primary-glow/80" />
           <div className="pointer-events-none absolute bottom-3 right-3 h-3.5 w-3.5 border-b-2 border-r-2 border-primary-glow/80" />
 
-          {/* Ambient Window Grid & Glow */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.14),transparent_70%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(139,92,246,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(139,92,246,0.04)_1px,transparent_1px)] bg-[size:28px_28px]" />
+          {/* Living liquid surface and ambient caustic lighting */}
+          <div className="home-liquid-base pointer-events-none absolute inset-0" />
+          <div className="home-liquid-grid pointer-events-none absolute inset-0" />
 
-          <div className="home-tap-center pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3">
+          {/* Each tap launches a surface wave sized to travel across the entire panel. */}
+          {ripples.map((ripple) => (
+            <div
+              key={ripple.id}
+              className="home-liquid-ripple pointer-events-none absolute z-[2]"
+              style={{
+                left: ripple.x,
+                top: ripple.y,
+                width: ripple.size,
+                height: ripple.size,
+                "--ripple-duration": `${ripple.duration}ms`,
+              } as React.CSSProperties}
+            >
+              <span className="home-liquid-ring home-liquid-ring-a" />
+              <span className="home-liquid-ring home-liquid-ring-b" />
+              <span className="home-liquid-ring home-liquid-ring-c" />
+              <span className="home-liquid-impact" />
+              <span className="home-liquid-caustic" />
+            </div>
+          )}
+
+          <div className="home-tap-center pointer-events-none absolute inset-0 z-[3] flex flex-col items-center justify-center gap-3">
             <div className="home-tap-orbit absolute rounded-full" />
             <div className="home-tap-medallion relative flex items-center justify-center">
               <div className="home-tap-medallion-glint absolute inset-0 rounded-full" />
