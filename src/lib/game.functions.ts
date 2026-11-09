@@ -553,11 +553,20 @@ export type CorpLeaderboardEntry = {
   membersCount: number;
 };
 
-export async function getCorporationLeaderboard(): Promise<CorpLeaderboardEntry[]> {
+export async function getCorporationLeaderboard(
+  sort: "activity" | "experience" | "valuation" = "activity",
+): Promise<CorpLeaderboardEntry[]> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Please sign in to continue");
   try {
-    const snaps = await getDocs(collection(db, "public_corporations"));
+    const rankingField = sort === "experience" ? "xp" : sort;
+    const snaps = await getDocs(
+      query(
+        collection(db, "public_corporations"),
+        orderBy(rankingField, "desc"),
+        limit(10),
+      ),
+    );
     return snaps.docs
       .map((d) => d.data())
       .filter((data) => !data.dissolved)
