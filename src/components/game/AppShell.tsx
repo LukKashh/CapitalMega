@@ -25,8 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
-import { auth, logOut } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BankingView } from "./BankingView";
 import { TaxView } from "./TaxView";
@@ -80,19 +79,19 @@ export function AppShell() {
       });
     };
     verify();
-    const unsubscribe = onAuthStateChanged(auth, () => {
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
       verify();
     });
     return () => {
       active = false;
-      unsubscribe();
+      listener.subscription.unsubscribe();
     };
   }, []);
 
   async function signOut() {
     await qc.cancelQueries();
     qc.clear();
-    await logOut();
+    await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   }
 
