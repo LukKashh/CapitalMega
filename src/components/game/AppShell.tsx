@@ -111,7 +111,7 @@ export function AppShell() {
                 >
                   <span
                     className={cn(
-                      "-mt-4 flex h-11 w-11 items-center justify-center rounded-xl border border-primary-glow bg-gradient-primary text-primary-foreground shadow-glow ring-4 ring-background",
+                      "game-nav-center-badge -mt-4 flex h-11 w-11 items-center justify-center rounded-xl border border-primary-glow bg-gradient-primary text-primary-foreground shadow-glow ring-4 ring-background",
                       !active && "opacity-85",
                     )}
                   >
