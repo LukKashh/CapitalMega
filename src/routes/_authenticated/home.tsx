@@ -38,23 +38,13 @@ type PopItem = {
   duration: number;
 };
 
-type LiquidRipple = {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  duration: number;
-};
-
 function HomePage() {
   const { data } = useGame();
   const opt = useOptimisticTaps(data);
   const { tap, buffer } = useClicker();
   const { openMenu } = useMenu();
   const [pops, setPops] = useState<PopItem[]>([]);
-  const [ripples, setRipples] = useState<LiquidRipple[]>([]);
   const popId = useRef(0);
-  const rippleId = useRef(0);
   if (!data) return <Loading />;
   const s = data.state;
   const p = personalMods(s);
@@ -66,39 +56,37 @@ function HomePage() {
   const shownCount = maxed ? 0 : Math.min(req, s.clicker.count + buffer);
   const xpPct = Math.min(100, ((s.xp + opt.xp) / xpForLevel(s.level)) * 100);
 
+  const lastRewardEffectAt = useRef(0);
+
   const createPop = (x: number, y: number): PopItem => {
     const id = ++popId.current;
-    // Randomized wavy pattern & randomized upward flow direction
-    const dx = (Math.random() - 0.5) * 38; // restrained lateral drift
-    const dy = -58 - Math.random() * 34; // short, crisp upward movement
-    const wave = (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 12); // subtle motion variation
-    const rotStart = (Math.random() - 0.5) * 12; // subtle initial rotation
-    const rotEnd = (Math.random() - 0.5) * 28; // restrained final rotation
-    const scale = 0.88 + Math.random() * 0.18; // coin scale
-    const duration = 880 + Math.floor(Math.random() * 220); // 880ms - 1100ms responsive feedback
-    return { id, x, y, dx, dy, wave, rotStart, rotEnd, scale, duration };
-  };
-
-  const triggerTapFeedback = (x: number, y: number, width: number, height: number) => {
-    tap();
-
-    const pop = createPop(x, y);
-    setPops((list) => [...list.slice(-24), pop]);
-    setTimeout(() => setPops((list) => list.filter((q) => q.id !== pop.id)), pop.duration + 50);
-
-    // Size each wave to reach the farthest corner of the live tap surface.
-    const farthestCorner = Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
-    const ripple: LiquidRipple = {
-      id: ++rippleId.current,
+    return {
+      id,
       x,
       y,
-      size: Math.max(260, farthestCorner * 2.12),
-      duration: 3000,
+      dx: (Math.random() - 0.5) * 18,
+      dy: -54,
+      wave: 0,
+      rotStart: 0,
+      rotEnd: (Math.random() - 0.5) * 8,
+      scale: 0.94 + Math.random() * 0.08,
+      duration: 680,
     };
-    setRipples((list) => [...list.slice(-11), ripple]);
+  };
+
+  const triggerTapFeedback = (x: number, y: number) => {
+    // Gameplay input is never throttled; only decorative reward effects are rate-limited.
+    tap();
+
+    const now = performance.now();
+    if (now - lastRewardEffectAt.current < 125) return;
+    lastRewardEffectAt.current = now;
+
+    const pop = createPop(x, y);
+    setPops((list) => [...list.slice(-3), pop]);
     setTimeout(
-      () => setRipples((list) => list.filter((item) => item.id !== ripple.id)),
-      ripple.duration + 500,
+      () => setPops((list) => list.filter((item) => item.id !== pop.id)),
+      pop.duration + 40,
     );
   };
 
@@ -107,14 +95,14 @@ function HomePage() {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
     const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-    triggerTapFeedback(x, y, rect.width, rect.height);
+    triggerTapFeedback(x, y);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       const rect = e.currentTarget.getBoundingClientRect();
-      triggerTapFeedback(rect.width / 2, rect.height / 2, rect.width, rect.height);
+      triggerTapFeedback(rect.width / 2, rect.height / 2);
     }
   };
 
@@ -206,33 +194,6 @@ function HomePage() {
           <div className="pointer-events-none absolute bottom-3 left-3 h-3.5 w-3.5 border-b-2 border-l-2 border-primary-glow/80" />
           <div className="pointer-events-none absolute bottom-3 right-3 h-3.5 w-3.5 border-b-2 border-r-2 border-primary-glow/80" />
 
-          {/* Living liquid surface and ambient caustic lighting */}
-          <div className="home-liquid-base pointer-events-none absolute inset-0" />
-          <div className="home-liquid-grid pointer-events-none absolute inset-0" />
-
-          {/* Each tap launches a surface wave sized to travel across the entire panel. */}
-          {ripples.map((ripple) => (
-            <div
-              key={ripple.id}
-              className="home-liquid-ripple pointer-events-none absolute z-[2]"
-              style={
-                {
-                  left: ripple.x,
-                  top: ripple.y,
-                  width: ripple.size,
-                  height: ripple.size,
-                  "--ripple-duration": `${ripple.duration}ms`,
-                } as React.CSSProperties
-              }
-            >
-              <span className="home-liquid-ring home-liquid-ring-a" />
-              <span className="home-liquid-ring home-liquid-ring-b" />
-              <span className="home-liquid-ring home-liquid-ring-c" />
-              <span className="home-liquid-impact" />
-              <span className="home-liquid-caustic" />
-            </div>
-          ))}
-
           <div className="home-tap-center pointer-events-none absolute inset-0 z-[3] flex flex-col items-center justify-center gap-3">
             <div className="home-tap-orbit absolute rounded-full" />
             <div className="home-tap-medallion relative flex items-center justify-center">
@@ -278,21 +239,13 @@ function HomePage() {
                 +{money(value)}
               </div>
 
-              {/* Reward coin launches from the impact with fluid particle wake. */}
               <div className="float-small-coin home-reward-coin relative">
-                <span className="home-reward-materialise absolute inset-0 z-[2] flex items-center justify-center">
-                  <img
-                    src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png"
-                    alt=""
-                    draggable={false}
-                    className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
-                  />
-                </span>
-                <span className="home-reward-trail" />
-                <span className="home-reward-particle home-reward-particle-a" />
-                <span className="home-reward-particle home-reward-particle-b" />
-                <span className="home-reward-particle home-reward-particle-c" />
-                <span className="home-reward-particle home-reward-particle-d" />
+                <img
+                  src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png"
+                  alt=""
+                  draggable={false}
+                  className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
+                />
               </div>
             </div>
           ))}
