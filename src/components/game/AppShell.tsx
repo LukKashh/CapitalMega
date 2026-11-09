@@ -64,7 +64,8 @@ export function AppShell() {
   const { data, isLoading, error, refetch } = useGame();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [menu, setMenu] = useState(false);
-  const [menuPanel, setMenuPanel] = useState<"banking" | "tax" | null>(null);
+  const [menuPanel, setMenuPanel] = useState<"tax" | null>(null);
+  const [bankingOpen, setBankingOpen] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [developerToolsOpen, setDeveloperToolsOpen] = useState(false);
   const qc = useQueryClient();
@@ -162,11 +163,7 @@ export function AppShell() {
           >
             <SheetHeader className="p-4 border-b border-border">
               <SheetTitle className="text-lg font-bold text-foreground">
-                {menuPanel === "banking"
-                  ? "Bank & Loans"
-                  : menuPanel === "tax"
-                    ? "Tax"
-                    : "Navigation"}
+                {menuPanel === "tax" ? "Tax" : "Navigation"}
               </SheetTitle>
             </SheetHeader>
 
@@ -181,7 +178,7 @@ export function AppShell() {
                   >
                     &larr; Back to Navigation
                   </Button>
-                  {menuPanel === "banking" ? <BankingView /> : <TaxView />}
+                  <TaxView />
                 </div>
               ) : (
                 <>
@@ -211,7 +208,10 @@ export function AppShell() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setMenuPanel("banking")}
+                      onClick={() => {
+                        setMenu(false);
+                        setBankingOpen(true);
+                      }}
                       className="w-full flex items-center gap-3 rounded-xl border border-primary/30 bg-card p-3.5 text-left transition-colors hover:border-primary hover:bg-primary/5"
                     >
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -308,6 +308,20 @@ export function AppShell() {
             </div>
           </SheetContent>
         </Sheet>
+
+        <Dialog open={bankingOpen} onOpenChange={setBankingOpen}>
+          <DialogContent className="flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:gap-4 sm:p-5">
+            <DialogHeader className="shrink-0 pr-8 text-left">
+              <DialogTitle className="text-lg font-bold">Bank & Loans</DialogTitle>
+              <DialogDescription>
+                Manage banking institutions, accounts, payments, and loans.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="banking-view min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pr-1">
+              <BankingView />
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {isDeveloper && (
           <DeveloperToolsDialog open={developerToolsOpen} onOpenChange={setDeveloperToolsOpen} />
