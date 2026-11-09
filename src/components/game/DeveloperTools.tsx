@@ -9,13 +9,15 @@ import {
   Search,
   ShieldCheck,
   UserRound,
+  Users,
+  RefreshCw,
   Wallet,
   Wifi,
   WifiOff,
   Zap,
 } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, runTransaction } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, runTransaction } from "firebase/firestore";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { EMPTY_MODS } from "@/game/config";
 import { gainXp, netWorth, personalMods, xpForLevel, type Ctx } from "@/game/engine";
@@ -87,7 +90,10 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [viewport, setViewport] = useState("—");
   const [lookup, setLookup] = useState("");
+  const [players, setPlayers] = useState<PlayerRecord[]>([]);
+  const [playersLoading, setPlayersLoading] = useState(false);
   const [player, setPlayer] = useState<PlayerRecord | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [kind, setKind] = useState<AdjustmentKind>("set-balance");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -114,12 +120,34 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     if (!open) {
       setLookup("");
       setPlayer(null);
+      setPlayers([]);
+      setConfirmOpen(false);
       setAmount("");
       setNotice("");
       setError("");
     }
   }, [open]);
 
+  async function loadPlayers() {
+    setPlayersLoading(true);
+    setError("");
+    try {
+      const snapshot = await getDocs(collection(db, "player_states"));
+      const records = snapshot.docs.map((item) => readPlayer(item.id, item.data() as Record<string, unknown>)).sort((a, b) => a.username.localeCompare(b.username));
+      setPlayers(records);
+      if (player) {
+        const refreshed = records.find((record) => record.uid === player.uid);
+        if (refreshed) setPlayer(refreshed);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load registered players.");
+    } finally { setPlayersLoading(false); }
+  }
+
+  useEffect(() => {
+    if (open) void loadPlayers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const diagnostics = [
     {
       label: "Authentication",
@@ -174,7 +202,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     }
   }
 
-  async function applyAdjustment() {
+  async function applyAdjustment(confirmed = false) {
     if (!player || !user) return;
     const parsed = Number(amount);
     if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_ADJUSTMENT) {
@@ -197,11 +225,11 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
       "grant-xp": "Grant XP through progression",
       "set-xp": "Set current-level XP progress",
     };
-    const confirmed = window.confirm(
-      `${operationLabels[kind]} for ${player.username} (${player.uid})?\n\nEntered value: ${parsed.toLocaleString()}\nThis action will be recorded in the administrator audit log.`,
-    );
-    if (!confirmed) return;
-
+    if (!confirmed) {
+      setConfirmOpen(true);
+      return;
+    }
+    setConfirmOpen(false);
     setBusy(true);
     setError("");
     setNotice("");
@@ -350,18 +378,24 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             <p className="mb-4 text-xs leading-relaxed text-slate-400">
               Development-only adjustments to a player's wallet balance and progression. Every applied change is recorded in the administrator audit log.
             </p>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                className={fieldClass}
-                value={lookup}
-                onChange={(event) => setLookup(event.target.value)}
-                onKeyDown={(event) => { if (event.key === "Enter") void findPlayer(); }}
-                placeholder="Player username or Firebase UID"
-                aria-label="Player username or Firebase UID"
-              />
-              <Button onClick={() => void findPlayer()} disabled={busy || !lookup.trim()} className="h-10 shrink-0 bg-violet-600 text-white hover:bg-violet-500">
-                <Search className="mr-2 h-4 w-4" /> Find player
-              </Button>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300"><Users className="h-4 w-4 text-violet-300" /> Registered users <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">{players.length}</span></div>
+                <Button type="button" variant="outline" size="sm" onClick={() => void loadPlayers()} disabled={playersLoading || busy} className="h-8 border-white/15 bg-white/5 text-slate-200 hover:bg-white/10"><RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh</Button>
+              </div>
+              <input className={fieldClass} value={lookup} onChange={(event) => setLookup(event.target.value)} placeholder="Filter by username or Firebase UID" aria-label="Filter registered users" />
+              <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-2">
+                {playersLoading && <p className="p-3 text-center text-xs text-slate-400">Loading registered users…</p>}
+                {!playersLoading && players.length === 0 && <p className="p-3 text-center text-xs text-slate-400">No registered player saves found.</p>}
+                {!playersLoading && players.filter((entry) => !lookup.trim() || entry.username.toLowerCase().includes(lookup.trim().toLowerCase()) || entry.uid.toLowerCase().includes(lookup.trim().toLowerCase())).map((entry) => (
+                  <button key={entry.uid} type="button" onClick={() => { setPlayer(entry); setAmount(""); setNotice(""); setError(""); }} className={"w-full rounded-lg border p-3 text-left transition-colors " + (player?.uid === entry.uid ? "border-violet-400/60 bg-violet-400/10" : "border-white/5 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.05]")}>
+                    <div className="flex items-center justify-between gap-3"><span className="truncate text-sm font-semibold text-white">{entry.username}</span><span className="shrink-0 text-xs text-slate-300">LV {entry.level}</span></div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400"><span>Wallet: {entry.cash.toLocaleString()}</span><span>XP: {entry.xp.toLocaleString()}</span></div>
+                    <div className="mt-1 break-all font-mono text-[10px] text-slate-500">{entry.uid}</div>
+                  </button>
+                ))}
+                {!playersLoading && players.length > 0 && players.filter((entry) => !lookup.trim() || entry.username.toLowerCase().includes(lookup.trim().toLowerCase()) || entry.uid.toLowerCase().includes(lookup.trim().toLowerCase())).length === 0 && <p className="p-3 text-center text-xs text-slate-400">No users match this filter.</p>}
+              </div>
             </div>
 
             {player && (
@@ -401,7 +435,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
                 {kind === "set-xp" && <p className="text-xs text-slate-500">Sets progress within the current level only; it cannot trigger a level-up.</p>}
                 {balanceOperation && <p className="text-xs text-slate-500">Only the player's wallet cash is changed. Bank deposits, loans and corporation funds remain untouched.</p>}
                 {xpOperation && <p className="text-xs text-slate-500">Direct XP adjustments do not create a wallet adjustment entry in the normal financial ledger.</p>}
-                <Button onClick={() => void applyAdjustment()} disabled={busy || amount.trim() === ""} className="w-full bg-violet-600 text-white hover:bg-violet-500">
+                <Button type="button" onClick={() => void applyAdjustment(false)} disabled={busy || amount.trim() === ""} className="w-full bg-violet-600 text-white hover:bg-violet-500">
                   <Zap className="mr-2 h-4 w-4" /> {busy ? "Applying…" : "Review and apply adjustment"}
                 </Button>
               </div>
@@ -429,6 +463,28 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
           </div>
         </div>
       </DialogContent>
+      <AlertDialog open={confirmOpen} onOpenChange={(next) => { if (!busy) setConfirmOpen(next); }}>
+        <AlertDialogContent className="border-white/10 bg-[#151927] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm player data adjustment</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-300">Review the exact change before applying it. This updates the selected player save immediately and records an administrator audit entry.</AlertDialogDescription>
+          </AlertDialogHeader>
+          {player && (
+            <div className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
+              <div className="flex justify-between gap-3"><span className="text-slate-400">Player</span><span className="text-right font-semibold text-white">{player.username}</span></div>
+              <div className="break-all text-right font-mono text-[10px] text-slate-500">{player.uid}</div>
+              <div className="flex justify-between gap-3"><span className="text-slate-400">Operation</span><span className="text-right text-white">{kind === "set-balance" ? "Set wallet balance" : kind === "add-balance" ? "Add wallet balance" : kind === "subtract-balance" ? "Subtract wallet balance" : kind === "grant-xp" ? "Grant XP" : "Set current-level XP"}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-400">Entered amount</span><span className="font-semibold text-white">{Number(amount).toLocaleString()}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-400">Current wallet</span><span className="text-white">{player.cash.toLocaleString()}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-400">Current level / XP</span><span className="text-white">LV {player.level} · {player.xp.toLocaleString()} XP</span></div>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy} className="border-white/15 bg-white/5 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={(event) => { event.preventDefault(); void applyAdjustment(true); }} className="bg-violet-600 text-white hover:bg-violet-500">{busy ? "Applying…" : "Confirm & Apply"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
