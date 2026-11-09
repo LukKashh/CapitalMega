@@ -18,7 +18,7 @@ The workflow builds a debug APK for testing. A Play Store release requires a sep
 - Capacitor: 8.x
 - Web output: `dist`
 
-Google sign-in inside the native app may still require Android OAuth client configuration and a native authentication integration. This workflow does not alter Firebase authentication or database rules.
+Google sign-in uses the native Android Credential Manager flow through `@capgo/capacitor-social-login`, then exchanges the Google ID token with the existing Firebase Authentication project. Browser sign-in continues to use Firebase popup authentication. The Android OAuth client must be registered in the same Google Cloud project with package name `com.capitalfortune.app` and the SHA-1 fingerprint of the signing certificate used for the APK. The configured `oAuthClientId` must be the Web application OAuth client ID. This workflow does not alter Firebase database rules.
 
 ## Important
 
