@@ -166,39 +166,35 @@ function RealEstatePage() {
             )
               .sort((a, b) => a.price - b.price)
               .map((d) => (
-                <Card key={d.id} className="flex flex-col gap-3 p-4">
-                  <div className="flex gap-4">
-                    <BuildingSprite
-                      propertyCategory={d.category}
-                      propertyName={d.name}
-                      fit="cover"
-                      className="game-art h-20 w-24 shrink-0 rounded-xl bg-gradient-to-br from-primary/15 via-muted/30 to-card border border-primary/30 p-1 shadow-xs"
-                    />
-                    <div className="flex min-w-0 flex-1 flex-col justify-between">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate font-semibold">{d.name}</div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {d.category} · {d.location}
-                          </div>
-                        </div>
-                        <div className="num shrink-0 whitespace-nowrap text-right font-semibold text-gain">
-                          {money(d.price)}
-                        </div>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <Pill tone="primary">Rent: {money(d.rent)}/h</Pill>
-                        <Pill>Demand: ×{d.demand.toFixed(1)}</Pill>
-                      </div>
+                <Card key={d.id} className="flex items-center gap-3 p-3">
+                  <BuildingSprite
+                    propertyCategory={d.category}
+                    propertyName={d.name}
+                    fit="cover"
+                    className="game-art h-14 w-16 shrink-0 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/15 via-muted/30 to-card p-1 shadow-xs"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{d.name}</div>
+                    <div className="truncate text-[10px] text-muted-foreground">
+                      {d.category} · {d.location}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[11px]">
+                      <span className="text-muted-foreground">
+                        Rent <span className="num font-semibold text-gain">{money(d.rent)}/h</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Price <span className="num font-semibold text-foreground">{money(d.price)}</span>
+                      </span>
                     </div>
                   </div>
                   <Confirm
                     trigger={
                       <Button
-                        className="w-full h-9 bg-gradient-primary"
+                        size="sm"
+                        className="h-8 shrink-0 px-3 text-[11px] bg-gradient-primary"
                         disabled={locked || pending || s.cash < d.price}
                       >
-                        Buy property
+                        Buy
                       </Button>
                     }
                     title={`Buy ${d.name}?`}
