@@ -6,7 +6,13 @@ import type { Ctx, Action } from "./game/engine.ts";
 import type { PlayerState } from "./game/types.ts";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json","Cache-Control":"no-store"}});
-const corpActions=new Set(["corpCreate","corpJoin","corpApply","corpAcceptInvite","corpDecideApplication","corpInvite","corpLeave","corpKick","corpSetRank","corpTransferFounder","corpContribute","corpShift","corpFacility","corpDepartment","corpAssignOfficer","corpBuyBusiness","corpSettings","corpDissolve"]);
+const corpActions = new Set(["corpCreate", "corpJoin", "corpApply", "corpAcceptInvite", "corpDecideApplication", "corpInvite", "corpLeave", "corpKick", "corpSetRank", "corpTransferFounder", "corpContribute", "corpShift", "corpFacility", "corpDepartment", "corpAssignOfficer", "corpBuyBusiness", "corpSettings", "corpDissolve"]);
+
+async function createCasinoSeed(secret: string, userId: string, round: number): Promise<string> {
+ const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+ const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`casino:${userId}:${round}`)));
+ return Array.from(signature.slice(0, 16), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 Deno.serve(async req=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});if(req.method!=="POST")return reply({error:"method_not_allowed"},405);
  const authorization=req.headers.get("Authorization");if(!authorization?.startsWith("Bearer "))return reply({error:"unauthorized"},401);
@@ -24,13 +30,16 @@ Deno.serve(async req=>{
  const action = (body.action ?? null) as Action | null;
  const key = body.key;
  if(action&&(typeof key!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(key)))return reply({error:"invalid_idempotency_key"},400);
- if(action&&(typeof action.type!=="string"||corpActions.has(action.type)||action.type.startsWith("casino")))return reply({error:"unsupported_action_type"},400);
+ if (action && (typeof action.type !== "string" || corpActions.has(action.type))) return reply({ error: "unsupported_action_type" }, 400);
  const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}}),uid=authData.user.id;
  for(let attempt=0;attempt<4;attempt++){
   const now=Date.now(),{data:row,error:readError}=await admin.from("player_states").select("state,version").eq("user_id",uid).maybeSingle();
   if(readError)return reply({error:"player_read_failed"},500);if(!row)return reply({error:"player_not_provisioned"},409);
   const state=row.state as PlayerState,version=Number(row.version)||1;reconcileState(state,now);
-  const ctx:Ctx={s:state,now,ledger:[],stock:[],corpMods:{...EMPTY_MODS}};
+  const ctx: Ctx = { s: state, now, ledger: [], stock: [], corpMods: { ...EMPTY_MODS } };
+  if (action?.type.startsWith("casino")) {
+   ctx.casinoSeed = await createCasinoSeed(service, uid, state.casino?.round ?? 0);
+  }
   try{tick(ctx);if(action)apply(ctx,action);checkAchievements(ctx)}catch(e){return reply({ok:false,error:e instanceof Error?e.message:"action_failed"},422)}
   const nw=Math.max(0,Math.round(netWorth(state,now).total)),response={ok:true,now,state,corp:null};
   const {data:committed,error:commitError}=await admin.rpc("commit_game_action",{p_user_id:uid,p_idempotency_key:action?key:`tick-${now}-${version}`,p_action_type:action?.type??"tick",p_expected_version:version,p_state:state,p_public_player:{username:state.username||"Player",level:state.level||1,net_worth:nw,corporation_tag:null},p_response:response,p_ledger:ctx.ledger.map(l=>({type:l.type,source:l.source,destination:l.destination,amount:l.amount,entity:l.entity??""})),p_stock:ctx.stock.map(x=>({item_id:x.item,qty:x.qty,edition_limit:x.max})),p_corporation:null});
