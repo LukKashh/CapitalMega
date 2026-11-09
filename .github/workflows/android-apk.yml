@@ -42,6 +42,9 @@ jobs:
           bunx cap sync android
           chmod +x android/gradlew
 
+      - name: Patch native Google sign-in activity
+        run: bash scripts/patch-android-google-login.sh
+
       - name: Compile debug APK
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace assembleDebug
