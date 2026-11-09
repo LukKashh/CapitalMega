@@ -34,7 +34,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies from lockfile
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Run test suite
         run: bun run test

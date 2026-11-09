@@ -1,5 +1,8 @@
-import { db, handleFirestoreError, OperationType, getCurrentUser } from "@/lib/firebase";
+import { getCurrentUser } from "@/lib/local-auth";
 import {
+  db,
+  handleFirestoreError,
+  OperationType,
   doc,
   getDoc,
   getDocs,
@@ -8,7 +11,7 @@ import {
   orderBy,
   limit,
   runTransaction,
-} from "firebase/firestore";
+} from "@/lib/local-firestore";
 import {
   apply,
   newPlayer,
@@ -68,20 +71,11 @@ function corpView(c: CorpState | null, uid: string) {
   };
 }
 
-/** Secret per-round casino seed: HMAC(server key, user:round). */
-async function casinoSeed(uid: string, round: number) {
-  const secret = process.env.CASINO_SECRET || "capitalfortune-firebase-prov-sec";
-  const k = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = new Uint8Array(
-    await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(`casino:${uid}:${round}`)),
-  );
-  return Array.from(sig.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
+/** Generate a per-round local casino seed. No server secret is available offline. */
+async function casinoSeed(_uid: string, _round: number) {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function run(
@@ -95,7 +89,7 @@ async function run(
   }
   let lastErr: unknown;
   for (let attempt = 0; attempt < 4; attempt++) {
-    const now = Date.now(); // server time is authoritative
+    const now = Date.now(); // Device-local time is used in standalone mode.
     const playerRef = doc(db, "player_states", uid);
     const snap = await getDoc(playerRef);
     const row = snap.exists()
@@ -201,8 +195,7 @@ async function run(
       throw e;
     }
 
-    // Atomic transaction commit to Firestore. Complete every transaction read
-    // before issuing the first write; Firestore rejects read-after-write flows.
+    // Atomically commit the complete local save, public projections and ledger.
     try {
       const commit = await runTransaction(db, async (tx) => {
         const curSnap = await tx.get(playerRef);
@@ -365,12 +358,12 @@ async function run(
         return { ok: false as const, error: "This limited edition is sold out" };
       if (msg.includes("player_username_unique"))
         return { ok: false as const, error: "That username is taken" };
-      console.warn("Firestore transaction commit failed:", txErr);
+      console.error("Local save transaction failed:", txErr);
       return {
         ok: false as const,
         error: action
-          ? "Action could not be saved. Please retry."
-          : "Your saved game could not be synchronized. Please retry.",
+          ? `Action could not be saved locally: ${msg}`
+          : `Your local save could not be loaded: ${msg}`,
       };
     }
   }
@@ -378,30 +371,17 @@ async function run(
 }
 
 export async function getGame() {
-  let user = await getCurrentUser();
-  if (!user && typeof window !== "undefined" && localStorage.getItem("guest_mode") === "true") {
-    user = { uid: "guest_player", email: "guest@capitalfortune.local" } as unknown as User;
-  }
-  if (!user) {
-    // Return a default new player state in guest/dev mode so UI always loads cleanly
-    const now = Date.now();
-    const st = newPlayer(now, "GuestTycoon");
-    return { ok: true as const, now, state: st, corp: null, offset: 0 };
-  }
-  const r = await run(user.uid, user.email || undefined, null, `tick-${crypto.randomUUID()}`);
+  const user = await getCurrentUser();
+  const r = await run(user.uid, undefined, null, `tick-${crypto.randomUUID()}`);
   return JSON.parse(JSON.stringify(r)) as typeof r;
 }
 
 export async function gameAction(input: { data: { key: string; action: AnyAction } }) {
-  let user = await getCurrentUser();
-  if (!user && typeof window !== "undefined" && localStorage.getItem("guest_mode") === "true") {
-    user = { uid: "guest_player", email: "guest@capitalfortune.local" } as unknown as User;
-  }
-  if (!user) throw new Error("Please sign in to continue");
+  const user = await getCurrentUser();
   if (!input || !input.data || typeof input.data.key !== "string") throw new Error("Bad key");
   if (!input.data.action || typeof input.data.action.type !== "string")
     throw new Error("Bad action");
-  const r = await run(user.uid, user.email || undefined, input.data.action, `a-${input.data.key}`);
+  const r = await run(user.uid, undefined, input.data.action, `a-${input.data.key}`);
   return JSON.parse(JSON.stringify(r)) as typeof r;
 }
 

@@ -1,5 +1,4 @@
-import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { MenuContext } from "@/context/menu";
 import {
@@ -25,8 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
-import { auth, logOut } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { auth, onAuthStateChanged } from "@/lib/local-auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BankingView } from "./BankingView";
 import { TaxView } from "./TaxView";
@@ -52,7 +50,7 @@ const NAV = [
 ] as const;
 
 const MORE = [
-  { to: "/leaderboard", label: "Online Leaderboard", icon: Trophy },
+  { to: "/leaderboard", label: "Local Rankings", icon: Trophy },
   { to: "/corporation", label: "Corporation", icon: Users },
   { to: "/casino", label: "Casino", icon: Dices },
   { to: "/research", label: "Research & Development", icon: FlaskConical },
@@ -69,8 +67,6 @@ export function AppShell() {
   const [bankingOpen, setBankingOpen] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [developerToolsOpen, setDeveloperToolsOpen] = useState(false);
-  const qc = useQueryClient();
-  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
@@ -90,10 +86,7 @@ export function AppShell() {
   }, []);
 
   async function signOut() {
-    await qc.cancelQueries();
-    qc.clear();
-    await logOut();
-    navigate({ to: "/auth", replace: true });
+    setMenu(false);
   }
 
   if (isLoading)
@@ -311,7 +304,7 @@ export function AppShell() {
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-loss hover:bg-loss/10 border border-loss/20"
               >
                 <LogOut className="h-4 w-4 shrink-0" />
-                Sign Out
+                Close Menu
               </Button>
             </div>
           </SheetContent>

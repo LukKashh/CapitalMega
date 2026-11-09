@@ -1199,7 +1199,20 @@ export type PropertyDef = {
   demand: number;
   image: string;
 };
-const img = (q: string) => `https://images.unsplash.com/${q}?auto=format&fit=crop&w=600&q=60`;
+const PROPERTY_IMAGES = [
+  "/assets/game/realestate/house.png",
+  "/assets/game/realestate/apartment.png",
+  "/assets/game/realestate/commercial.png",
+  "/assets/game/realestate/hotel.png",
+  "/assets/game/realestate/mall.png",
+];
+const img = (key: string) => {
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) | 0;
+  }
+  return PROPERTY_IMAGES[Math.abs(hash) % PROPERTY_IMAGES.length]!;
+};
 export const PROPERTIES: PropertyDef[] = [
   {
     id: "p_studio",

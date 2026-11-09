@@ -1,0 +1,99 @@
+name: Android Offline APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [android/hybrid-local-engine]
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build and verify offline Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Regenerate lockfile for the dependency migration
+        run: |
+          rm -f bun.lock
+          bun install
+
+      - name: Run game and local database tests
+        run: bun run test
+
+      - name: Run lint
+        run: bun run lint
+
+      - name: Build web application
+        run: bun run build
+
+      - name: Verify built application has no online runtime dependencies
+        run: bun run verify:offline
+
+      - name: Generate Android project and sync native plugins
+        run: |
+          if [ ! -d android ]; then
+            bunx cap add android
+          fi
+          bunx cap sync android
+          chmod +x android/gradlew
+
+      - name: Remove network permissions and disable system cloud backup
+        run: bash scripts/prepare-offline-android.sh
+
+      - name: Compile debug APK
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Verify APK package, identity, and offline permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
+          test -n "$AAPT"
+          "$AAPT" dump badging "$APK" | grep -q "package: name='com.capitalfortune.app'"
+          "$AAPT" dump permissions "$APK" > apk-permissions.txt
+          if grep -Eq "android.permission.(INTERNET|ACCESS_NETWORK_STATE)" apk-permissions.txt; then
+            echo "APK still requests network permissions:" >&2
+            grep -E "android.permission.(INTERNET|ACCESS_NETWORK_STATE)" apk-permissions.txt >&2
+            exit 1
+          fi
+          echo "APK package identity and network-permission checks passed."
+
+      - name: Verify APK signing certificate
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          cd android
+          ./gradlew --no-daemon signingReport > ../signing-report.txt
+          cd ..
+          grep -q 'SHA1:' signing-report.txt
+
+      - name: Upload offline APK and verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: capital-fortune-offline-apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            signing-report.txt
+            apk-permissions.txt
+            bun.lock
+          if-no-files-found: error
+          retention-days: 14

@@ -109,7 +109,7 @@ function notifyNew(prev: PlayerState | undefined, next: PlayerState) {
   }
 }
 
-/** Shared store of taps not yet confirmed by the server (queued + in flight). */
+/** Shared store of taps not yet confirmed by the local save (queued + in flight). */
 const tapStore = {
   queued: 0,
   inflight: 0,
@@ -134,12 +134,12 @@ const tapStore = {
   },
 };
 
-/** Number of taps shown optimistically but not yet confirmed by the server. */
+/** Number of taps shown optimistically but not yet confirmed by the local save. */
 export function useUnconfirmedTaps() {
   return useSyncExternalStore(tapStore.subscribe, tapStore.total, () => 0);
 }
 
-/** Optimistic per-tap estimate (display only; server stays authoritative). */
+/** Optimistic per-tap estimate (display only; local game engine remains authoritative). */
 export function useOptimisticTaps(data: GameData | undefined, clickValue = 0) {
   const taps = useUnconfirmedTaps();
   return useMemo(() => {
@@ -148,7 +148,7 @@ export function useOptimisticTaps(data: GameData | undefined, clickValue = 0) {
   }, [data, taps, clickValue]);
 }
 
-/** Batches taps and sends them to the server; server validates rate. */
+/** Batches taps and commits them to the local save; server validates rate. */
 export function useClicker() {
   const qc = useQueryClient();
   const buffer = useUnconfirmedTaps();
@@ -192,7 +192,7 @@ export function useClicker() {
       // Keep the exact same key and count: if the server committed but the
       // response was lost, retrying is safe because the server deduplicates it.
       if (!tapStore.failureNotified) {
-        toast.error("Connection issue — pending clicks will be retried");
+        toast.error("Save issue — pending clicks will be retried");
         tapStore.failureNotified = true;
       }
     } finally {

@@ -15,8 +15,8 @@ import {
   WifiOff,
   Zap,
 } from "lucide-react";
-import { auth, db } from "@/lib/firebase";
-import { collection, doc, getDoc, getDocs, runTransaction, setDoc } from "firebase/firestore";
+import { auth, getCurrentUser } from "@/lib/local-auth";
+import { db, collection, doc, getDocs, runTransaction } from "@/lib/local-firestore";
 import {
   Dialog,
   DialogContent,
@@ -30,40 +30,8 @@ import { EMPTY_MODS } from "@/game/config";
 import { gainXp, netWorth, personalMods, xpForLevel, type Ctx } from "@/game/engine";
 import type { PlayerState } from "@/game/types";
 
-const ADMIN_EMAILS = new Set([
-  "puncisters@gmail.com",
-  "lukass16.ivanovs@gmail.com",
-  "lukass21.ivanovs@gmail.com",
-]);
-
 export async function checkDeveloperAccess(): Promise<boolean> {
-  const user = auth.currentUser;
-  if (!user) return false;
-  const isEmailAdmin = !!(user.email && ADMIN_EMAILS.has(user.email.toLowerCase()));
-  if (isEmailAdmin) {
-    try {
-      const adminRef = doc(db, "admins", user.uid);
-      const snapshot = await getDoc(adminRef);
-      if (!snapshot.exists()) {
-        await setDoc(adminRef, {
-          userId: user.uid,
-          email: user.email?.toLowerCase(),
-          role: "admin",
-          grantedAt: Date.now(),
-        });
-      }
-    } catch (error) {
-      console.warn("Unable to sync admin document:", error);
-    }
-    return true;
-  }
-  try {
-    const adminRecord = await getDoc(doc(db, "admins", user.uid));
-    return adminRecord.exists();
-  } catch (error) {
-    console.error("Unable to verify developer access:", error);
-    return false;
-  }
+  return !!(await getCurrentUser());
 }
 
 type DeveloperToolsDialogProps = {
@@ -168,7 +136,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     {
       label: "Authentication",
       value: user ? "Authenticated" : "No active user",
-      detail: user?.isAnonymous ? "Anonymous guest session" : "Firebase account session",
+      detail: user?.isAnonymous ? "Local player identity" : "On-device local profile",
       icon: ShieldCheck,
       ok: !!user,
     },
@@ -232,24 +200,6 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     setError("");
     setNotice("");
     try {
-      // Ensure admin document exists in Firestore before transaction
-      if (user.email && ADMIN_EMAILS.has(user.email.toLowerCase())) {
-        try {
-          const adminRef = doc(db, "admins", user.uid);
-          const snap = await getDoc(adminRef);
-          if (!snap.exists()) {
-            await setDoc(adminRef, {
-              userId: user.uid,
-              email: user.email.toLowerCase(),
-              role: "admin",
-              grantedAt: Date.now(),
-            });
-          }
-        } catch {
-          // Continue if already exists
-        }
-      }
-
       const playerRef = doc(db, "player_states", player.uid);
       const auditRef = doc(db, "admin_audit", crypto.randomUUID());
       const now = Date.now();
@@ -313,7 +263,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
         const previousValue = Number(before ?? 0);
         const resultingValue = Number(after ?? 0);
         const enteredAmount = Number(parsed);
-        const actorEmail = user.email ? String(user.email).toLowerCase() : "admin@capitalfortune.local";
+        const actorEmail = user.email ? String(user.email).toLowerCase() : "local-admin@capitalfortune.local";
 
         transaction.set(playerRef, {
           ...row,
@@ -385,12 +335,12 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             </div>
             <DialogTitle className="text-xl font-semibold tracking-tight sm:text-2xl">Developer Console</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Restricted diagnostic and development workspace for authorized Capitalfortune administrators.
+              Device-local development workspace. Adjustments affect only the save stored on this installation.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-5 flex flex-wrap items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-emerald-300">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Administrator access
+              <CheckCircle2 className="h-3.5 w-3.5" /> Local save access
             </span>
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300">Diagnostics + player data controls</span>
           </div>
@@ -424,13 +374,13 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             </p>
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300"><Users className="h-4 w-4 text-violet-300" /> Registered users <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">{players.length}</span></div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300"><Users className="h-4 w-4 text-violet-300" /> Local players <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">{players.length}</span></div>
                 <Button type="button" variant="outline" size="sm" onClick={() => void loadPlayers()} disabled={playersLoading || busy} className="h-8 border-white/15 bg-white/5 text-slate-200 hover:bg-white/10"><RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh</Button>
               </div>
-              <input className={fieldClass} value={lookup} onChange={(event) => setLookup(event.target.value)} placeholder="Filter by username or Firebase UID" aria-label="Filter registered users" />
+              <input className={fieldClass} value={lookup} onChange={(event) => setLookup(event.target.value)} placeholder="Filter by username or Local Device ID" aria-label="Filter local players" />
               <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-2">
-                {playersLoading && <p className="p-3 text-center text-xs text-slate-400">Loading registered users…</p>}
-                {!playersLoading && players.length === 0 && <p className="p-3 text-center text-xs text-slate-400">No registered player saves found.</p>}
+                {playersLoading && <p className="p-3 text-center text-xs text-slate-400">Loading local players…</p>}
+                {!playersLoading && players.length === 0 && <p className="p-3 text-center text-xs text-slate-400">No local player saves found.</p>}
                 {!playersLoading && players.filter((entry) => !lookup.trim() || entry.username.toLowerCase().includes(lookup.trim().toLowerCase()) || entry.uid.toLowerCase().includes(lookup.trim().toLowerCase())).map((entry) => (
                   <button key={entry.uid} type="button" onClick={() => { setPlayer(entry); setAmount(""); setNotice(""); setError(""); }} className={"w-full rounded-lg border p-3 text-left transition-colors " + (player?.uid === entry.uid ? "border-violet-400/60 bg-violet-400/10" : "border-white/5 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.05]")}>
                     <div className="flex items-center justify-between gap-3"><span className="truncate text-sm font-semibold text-white">{entry.username}</span><span className="shrink-0 text-xs text-slate-300">LV {entry.level}</span></div>
@@ -446,7 +396,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
               <div className="mt-4 space-y-4">
                 <div className="grid grid-cols-1 gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2">
                   <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Username</div><div className="mt-1 font-semibold text-white">{player.username}</div></div>
-                  <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Firebase UID</div><div className="mt-1 break-all font-mono text-xs text-slate-300">{player.uid}</div></div>
+                  <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Local Device ID</div><div className="mt-1 break-all font-mono text-xs text-slate-300">{player.uid}</div></div>
                   <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Wallet balance</div><div className="mt-1 font-semibold text-emerald-300">{player.cash.toLocaleString()}</div></div>
                   <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Player level</div><div className="mt-1 font-semibold text-white">{player.level}</div></div>
                   <div className="sm:col-span-2">
@@ -492,17 +442,17 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
 
           <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
-              <UserRound className="h-4 w-4 text-violet-300" /> Current administrator session
+              <UserRound className="h-4 w-4 text-violet-300" /> Current local profile
             </div>
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div><dt className="text-xs text-slate-500">Email</dt><dd className="mt-1 break-all text-slate-200">{user?.email ?? "Unavailable"}</dd></div>
               <div><dt className="text-xs text-slate-500">Email verification</dt><dd className="mt-1 text-slate-200">{user?.emailVerified ? "Verified" : "Not verified / unavailable"}</dd></div>
-              <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Firebase user ID</dt><dd className="mt-1 break-all font-mono text-xs text-slate-300">{user?.uid ?? "Unavailable"}</dd></div>
+              <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Local Device ID</dt><dd className="mt-1 break-all font-mono text-xs text-slate-300">{user?.uid ?? "Unavailable"}</dd></div>
             </dl>
           </section>
 
           <p className="text-xs leading-relaxed text-slate-500">
-            Administrative writes use Firestore transactions, reject stale player versions, and create an append-only audit record. Firestore security rules enforce administrator access independently of this interface.
+            Adjustments use local database transactions, reject stale player versions, and create a local audit record. This console is not a server-secured administrator system.
           </p>
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="border-white/15 bg-white/5 text-white hover:bg-white/10">Close console</Button>
