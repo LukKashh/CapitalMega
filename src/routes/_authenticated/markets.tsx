@@ -389,11 +389,11 @@ function MarketsPage() {
         {tab === "stocks" ? (
           <div className="flex gap-1 overflow-x-auto pb-1 text-xs">
             {[
-              { id: "growth" as const, label: "Highest Growth in a Day" },
-              { id: "dip" as const, label: "Biggest dip in a Day" },
-              { id: "dividends" as const, label: "Highest Dividends" },
-              { id: "marketCapDesc" as const, label: "Biggest capitalization" },
-              { id: "marketCapAsc" as const, label: "Lowest cap" },
+              { id: "growth" as const, label: "Top gainers" },
+              { id: "dip" as const, label: "Top losers" },
+              { id: "dividends" as const, label: "Dividends" },
+              { id: "marketCapDesc" as const, label: "Largest cap" },
+              { id: "marketCapAsc" as const, label: "Smallest cap" },
             ].map((f) => (
               <button
                 key={f.id}
@@ -415,9 +415,9 @@ function MarketsPage() {
         ) : (
           <div className="flex gap-1 overflow-x-auto pb-1 text-xs">
             {[
-              { id: "growth" as const, label: "Highest Growth in a Day" },
-              { id: "dip" as const, label: "Biggest dip in a Day" },
-              { id: "stables" as const, label: "Stables" },
+              { id: "growth" as const, label: "Top gainers" },
+              { id: "dip" as const, label: "Top losers" },
+              { id: "stables" as const, label: "Stable" },
               { id: "volatility" as const, label: "High volatility" },
             ].map((f) => (
               <button
@@ -440,21 +440,13 @@ function MarketsPage() {
         )}
 
         {tab === "stocks" && (
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
-            <span>
-              Next IPO: {upcoming.name} in {duration(upcoming.at - now)}
-            </span>
-            <span>
-              Page {currentPage} of {totalPages} (6/page)
-            </span>
+          <div className="px-1 text-[11px] text-muted-foreground">
+            Next IPO: {upcoming.name} in {duration(upcoming.at - now)}
           </div>
         )}
         {tab === "crypto" && (
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
-            <span>24/7 Global Decentralized Order Books</span>
-            <span>
-              Page {currentPage} of {totalPages} (6/page)
-            </span>
+          <div className="px-1 text-[11px] text-muted-foreground">
+            24/7 market
           </div>
         )}
       </div>
@@ -465,16 +457,15 @@ function MarketsPage() {
               <div
                 key={r.s.ticker}
                 onClick={() => setSelectedAsset({ market: "stock", sym: r.s.ticker })}
-                className="game-market-row flex items-center justify-between px-3 py-2.5 cursor-pointer"
+                className="game-market-row flex cursor-pointer items-center justify-between gap-2 px-3 py-2"
               >
                 <span className="game-market-monogram">{r.s.ticker.slice(0, 1)}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-xs sm:text-sm">
-                    {r.s.ticker} {r.s.generated && <Pill tone="primary">New</Pill>}
+                  <div className="flex items-center gap-1.5 font-semibold text-xs sm:text-sm">
+                    <span>{r.s.ticker}</span>
+                    {r.s.generated && <Pill tone="primary">New</Pill>}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {r.s.name} · Cap {money(r.cap)} · Div {pct(r.s.dividendYield, 1)}
-                  </div>
+                  <div className="truncate text-[10px] text-muted-foreground">{r.s.name}</div>
                 </div>
                 <Sparkline
                   values={Array.from({ length: 18 }, (_, i) =>
@@ -494,14 +485,12 @@ function MarketsPage() {
               <div
                 key={r.c.symbol}
                 onClick={() => setSelectedAsset({ market: "crypto", sym: r.c.symbol })}
-                className="game-market-row flex items-center justify-between px-3 py-2.5 cursor-pointer"
+                className="game-market-row flex cursor-pointer items-center justify-between gap-2 px-3 py-2"
               >
                 <span className="game-market-monogram">{r.c.symbol.slice(0, 1)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-xs sm:text-sm">{r.c.symbol}</div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {r.c.name} · {r.c.profile} volatility
-                  </div>
+                  <div className="truncate text-[10px] text-muted-foreground">{r.c.name}</div>
                 </div>
                 <Sparkline
                   values={Array.from({ length: 18 }, (_, i) =>
