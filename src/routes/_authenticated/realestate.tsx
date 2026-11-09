@@ -44,16 +44,17 @@ function RealEstatePage() {
   const { run, pending } = useAct();
   const [tab, setTab] = useState<"owned" | "market">("owned");
   const [cat, setCat] = useState("All");
-  if (!data) return <Loading />;
+  const p = data ? personalMods(data.state) : null;
+  const cm = data ? corpMods(data.corp) : null;
+  if (!data || !p || !cm) return <Loading />;
   const s = data.state;
-  const p = personalMods(s);
-  const cm = corpMods(data.corp);
   const owned = Object.values(s.properties);
+  const propertyRows = owned.map((pr) => ({ pr, e: propertyEcon(pr, p, cm, now) }));
   const cats = ["All", ...new Set(PROPERTIES.map((x) => x.category))];
   const locked = s.level < UNLOCKS.realEstate;
-  const rentNet = owned.reduce((a, pr) => a + propertyEcon(pr, p, cm, now).net, 0);
-  const rentWallet = owned.reduce(
-    (a, pr) => a + liveRentWallet(pr, propertyEcon(pr, p, cm, now).net, s.lastTick, now),
+  const rentNet = propertyRows.reduce((total, row) => total + row.e.net, 0);
+  const rentWallet = propertyRows.reduce(
+    (total, row) => total + liveRentWallet(row.pr, row.e.net, s.lastTick, now),
     0,
   );
   return (
@@ -100,9 +101,8 @@ function RealEstatePage() {
                 Transfer to balance
               </Button>
             </Card>
-            {owned.map((pr) => {
+            {propertyRows.map(({ pr, e }) => {
               const d = PROPERTIES.find((x) => x.id === pr.defId)!;
-              const e = propertyEcon(pr, p, cm, now);
               return (
                 <Link key={pr.inst} to="/realestate/$inst" params={{ inst: pr.inst }}>
                   <Card className="mb-2 flex gap-3 p-3">
