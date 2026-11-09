@@ -1232,6 +1232,7 @@ export function BankingView() {
               })}
             </div>
           </div>
+        </div>
           )}
         </main>
       </div>
