@@ -95,7 +95,7 @@ describe("corporationLeaderboardEntry", () => {
       level: 4,
       xp: 250,
       activity: 72,
-      valuation: 12_000 + facilitySpend + department.cost + business.price,
+      valuation: 12_000 + facilitySpend + department.cost + business.price * 2,
     });
   });
 });
