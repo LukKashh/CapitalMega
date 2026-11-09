@@ -44,13 +44,20 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace assembleDebug
 
-      - name: Verify APK
-        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify APK and capture signing certificate
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          cd android
+          ./gradlew --no-daemon signingReport > ../signing-report.txt
+          cd ..
+          grep -q 'SHA1:' signing-report.txt
 
-      - name: Upload APK
+      - name: Upload APK and signing report
         uses: actions/upload-artifact@v4
         with:
           name: capital-fortune-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            signing-report.txt
           if-no-files-found: error
           retention-days: 14
