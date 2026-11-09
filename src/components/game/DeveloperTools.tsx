@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier -- JSX layout is kept compact in this existing dialog. */
 import { useEffect, useState } from "react";
 import {
   Activity,
