@@ -34,6 +34,7 @@ export function useGame() {
     // full-state transactions without a corresponding UI need.
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
+    retry: 0,
     staleTime: 15_000,
   });
 }
