@@ -101,7 +101,10 @@ service cloud.firestore {
 
     // Player state collection (cloud-saved game per player)
     match /player_states/{userId} {
-      allow get, list: if isSignedIn();
+      // Full saves contain private progression, balances, holdings and history.
+      // Ordinary clients may read only their own save; administrators retain access.
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if (isOwner(userId) || isAdmin())
         && isValidPlayerState(incoming())
         && incoming().userId == userId;
@@ -111,6 +114,65 @@ service cloud.firestore {
         )
         && isValidPlayerState(incoming())
         && incoming().userId == userId;
+      allow delete: if isAdmin();
+    }
+
+    function matchesPublicPlayerProjection(userId) {
+      let playerPath = /databases/$(database)/documents/player_states/$(userId);
+      let player = getAfter(playerPath).data;
+      return existsAfter(playerPath)
+        && request.resource.data.userId == userId
+        && request.resource.data.username == player.username
+        && request.resource.data.level == player.level
+        && request.resource.data.netWorth == player.netWorth
+        && request.resource.data.liquid == player.liquid
+        && request.resource.data.title == player.title
+        && request.resource.data.avatar == player.avatar
+        && request.resource.data.corpTag == player.corpTag
+        && request.resource.data.corpId == player.state.corp.id
+        && request.resource.data.updatedAt == player.updatedAt;
+    }
+
+    // Minimal public leaderboard projection; never expose the private save payload.
+    match /public_players/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isOwner(userId)
+        && matchesPublicPlayerProjection(userId);
+      allow delete: if isAdmin();
+    }
+
+    function canPublishCorporationProjection(corpId) {
+      let corpPath = /databases/$(database)/documents/corporations/$(corpId);
+      let afterCorp = getAfter(corpPath).data;
+      return isSignedIn()
+        && existsAfter(corpPath)
+        && (
+          afterCorp.founderId == request.auth.uid
+          || afterCorp.state.members[request.auth.uid] != null
+          || (
+            exists(corpPath)
+            && (
+              get(corpPath).data.founderId == request.auth.uid
+              || get(corpPath).data.state.members[request.auth.uid] != null
+            )
+          )
+        );
+    }
+
+    // Lightweight public ranking data maintained atomically with corporation saves.
+    match /public_corporations/{corpId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if canPublishCorporationProjection(corpId)
+        && request.resource.data.id == corpId
+        && request.resource.data.name == getAfter(
+          /databases/$(database)/documents/corporations/$(corpId)
+        ).data.name
+        && request.resource.data.tag == getAfter(
+          /databases/$(database)/documents/corporations/$(corpId)
+        ).data.tag
+        && request.resource.data.dissolved == getAfter(
+          /databases/$(database)/documents/corporations/$(corpId)
+        ).data.dissolved;
       allow delete: if isAdmin();
     }
 
