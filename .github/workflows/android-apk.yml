@@ -1,0 +1,99 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [android/apk-cloud-build]
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build web application
+        run: bun run build
+
+      - name: Generate Android project and sync assets
+        run: |
+          if [ ! -d android ]; then
+            bunx cap add android
+          fi
+          bunx cap sync android
+          chmod +x android/gradlew
+
+      - name: Patch native Google sign-in activity
+        run: bash scripts/patch-android-google-login.sh
+
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.config/.android/debug.keystore
+          key: capital-fortune-debug-keystore-v1
+
+      - name: Compile debug APK
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Verify APK contents and application identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
+          test -n "$AAPT"
+          "$AAPT" dump badging "$APK" | grep -q "package: name='com.capitalfortune.app'"
+          DEX_LIST=$(unzip -Z1 "$APK" | grep -E '^classes[0-9]*\.dex$')
+          for CLASS in SocialLoginPlugin GoogleProvider; do
+            FOUND=0
+            while IFS= read -r DEX; do
+              if unzip -p "$APK" "$DEX" | strings | grep -q "$CLASS"; then
+                FOUND=1
+                break
+              fi
+            done <<< "$DEX_LIST"
+            if [ "$FOUND" -ne 1 ]; then
+              echo "Missing native Google class: $CLASS" >&2
+              exit 1
+            fi
+          done
+
+      - name: Verify APK and capture signing certificate
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          cd android
+          ./gradlew --no-daemon signingReport > ../signing-report.txt
+          cd ..
+          grep -q 'SHA1:' signing-report.txt
+
+      - name: Upload APK and signing report
+        uses: actions/upload-artifact@v4
+        with:
+          name: capital-fortune-debug-apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            signing-report.txt
+          if-no-files-found: error
+          retention-days: 14
