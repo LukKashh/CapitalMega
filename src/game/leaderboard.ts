@@ -38,9 +38,13 @@ export function corporationLeaderboardEntry(
     if (department) upgradeSpend += department.cost;
   }
 
+  let businessValuation = 0;
   for (const business of Object.values(corporation.businesses || {})) {
     const definition = CORP_BUSINESSES.find((item) => item.id === business.defId);
-    if (definition) upgradeSpend += definition.price;
+    if (definition) {
+      upgradeSpend += definition.price;
+      businessValuation += definition.price;
+    }
   }
 
   let totalShifts = 0;
@@ -60,6 +64,9 @@ export function corporationLeaderboardEntry(
       totalShifts * 10 +
       Math.floor(totalContributions / 1000) +
       (corporation.completedObjectives?.length || 0) * 50,
-    valuation: upgradeSpend + (corporation.treasury || 0),
+    // Keep the pre-existing leaderboard valuation semantics: business
+    // purchase value contributes once to upgradeSpend and once to the
+    // business holdings subtotal.
+    valuation: upgradeSpend + businessValuation + (corporation.treasury || 0),
   };
 }
