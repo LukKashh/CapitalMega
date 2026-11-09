@@ -116,6 +116,10 @@ const tapStore = {
   inflight: 0,
   retry: null as { count: number; key: string } | null,
   failureNotified: false,
+  retryAfter: 0,
+  conflictCount: 0,
+  conflictsPaused: false,
+  pauseNotified: false,
   listeners: new Set<() => void>(),
   emit() {
     for (const l of tapStore.listeners) l();
@@ -155,7 +159,12 @@ export function useClicker() {
   const buffer = useUnconfirmedTaps();
   const flushing = useRef(false);
   const flush = useCallback(async () => {
-    if (flushing.current || (!tapStore.retry && tapStore.queued === 0)) return;
+    if (
+      flushing.current ||
+      tapStore.conflictsPaused ||
+      Date.now() < tapStore.retryAfter ||
+      (!tapStore.retry && tapStore.queued === 0)
+    ) return;
     flushing.current = true;
 
     const batch =
@@ -187,12 +196,40 @@ export function useClicker() {
       notifyNew(prev?.state, r.state);
       committed = true;
       tapStore.failureNotified = false;
-    } catch {
-      // Keep the exact same key and count: if the server committed but the
-      // response was lost, retrying is safe because the server deduplicates it.
-      if (!tapStore.failureNotified) {
-        toast.error("Connection issue — pending clicks will be retried");
-        tapStore.failureNotified = true;
+      tapStore.conflictCount = 0;
+      tapStore.retryAfter = 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isVersionConflict =
+        message.includes("save_conflict_retry_once") ||
+        message.includes("player_state_conflict") ||
+        message.includes("busy_retry");
+
+      if (isVersionConflict) {
+        // The server explicitly rejected this stale-version write, so it did
+        // not commit. Requeue the taps with a fresh idempotency key next time.
+        tapStore.retry = null;
+        tapStore.queued += batch.count;
+        tapStore.conflictCount += 1;
+        tapStore.retryAfter = Date.now() + Math.min(30_000, 1_000 * 2 ** tapStore.conflictCount);
+        if (tapStore.conflictCount >= 3) {
+          tapStore.conflictsPaused = true;
+          if (!tapStore.pauseNotified) {
+            toast.error("Save sync paused after repeated conflicts. Reload the game to reconnect safely.");
+            tapStore.pauseNotified = true;
+          }
+        } else if (!tapStore.failureNotified) {
+          toast.error("Save changed elsewhere — pending clicks will retry shortly");
+          tapStore.failureNotified = true;
+        }
+      } else {
+        // For network errors the commit result is unknown; preserve the same
+        // key and count to avoid applying a possibly-committed batch twice.
+        tapStore.retryAfter = Date.now() + 5_000;
+        if (!tapStore.failureNotified) {
+          toast.error("Connection issue — pending clicks will be retried");
+          tapStore.failureNotified = true;
+        }
       }
     } finally {
       if (committed && tapStore.retry?.key === batch.key) tapStore.retry = null;
@@ -217,6 +254,7 @@ export function useClicker() {
     };
   }, [flush]);
   const tap = useCallback(() => {
+    if (tapStore.conflictsPaused) return;
     const pendingRetry = tapStore.retry?.count ?? 0;
     if (tapStore.queued + pendingRetry >= 120) return;
     tapStore.queued += 1;
