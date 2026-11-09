@@ -133,7 +133,10 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {diagnostics.map((item) => (
-                <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
+                <div
+                  key={item.label}
+                  className="rounded-xl border border-white/10 bg-white/[0.035] p-4"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
                       {item.label}
@@ -174,9 +177,10 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
           </section>
 
           <p className="text-xs leading-relaxed text-slate-500">
-            This console currently exposes diagnostics only. It does not modify player saves, balances,
-            accounts, or live game data. Authorization is checked against the existing Firestore
-            administrator policy; Firestore security rules remain the enforcement boundary.
+            This console currently exposes diagnostics only. It does not modify player saves,
+            balances, accounts, or live game data. Authorization is checked against the existing
+            Firestore administrator policy; Firestore security rules remain the enforcement
+            boundary.
           </p>
           <div className="flex justify-end">
             <Button

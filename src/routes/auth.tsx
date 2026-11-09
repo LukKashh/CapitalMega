@@ -133,7 +133,8 @@ function AuthPage() {
             </span>
           </h1>
           <p className="mt-6 max-w-lg text-base leading-7 text-slate-300">
-            Start with nothing. Make decisions, grow your portfolio, and shape an empire that is yours.
+            Start with nothing. Make decisions, grow your portfolio, and shape an empire that is
+            yours.
           </p>
           <div className="mt-10 grid max-w-lg grid-cols-2 gap-3">
             <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur">

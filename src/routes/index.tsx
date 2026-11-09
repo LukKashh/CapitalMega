@@ -82,8 +82,8 @@ function Landing() {
             </span>
           </h1>
           <p className="mt-6 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
-            Shape your financial future, grow your business empire, and build your own path to wealth in
-            Capitalfortune.
+            Shape your financial future, grow your business empire, and build your own path to
+            wealth in Capitalfortune.
           </p>
           <div className="mt-8 flex w-full max-w-md flex-col gap-3 sm:flex-row">
             <Button
@@ -132,7 +132,8 @@ function Landing() {
           </div>
         </div>
         <div className="mt-7 flex items-center gap-2 text-[11px] text-slate-400">
-          <ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure sign-in · Cloud-saved progression
+          <ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure sign-in · Cloud-saved
+          progression
         </div>
       </div>
     </main>
