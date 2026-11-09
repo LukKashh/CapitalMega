@@ -1,26 +1,25 @@
 # Independent Edition — Migration Status
 
 ## Completed
-- Extracted and inspected the uploaded archive (270 files, 40 directories) and identified the active runtime integrations.
-- Confirmed the source project is Capital Fortune, a wealth/business tycoon game.
-- Created branch `remix/supabase-android-independent` from `main`; all migration work stays off `main`.
-- Selected the connected Supabase project `CapitalfortuneViz` in `eu-central-1`.
-- Applied the backend foundation migrations: 11 RLS-protected application tables and the corporation founder FK index.
-- Added a private, service-role-only Postgres commit primitive for player state, public player projection, ledger entries, collectible stock, corporation state and idempotent action receipts. It serializes writes on the player row and checks the expected version.
-- Hardened collectible edition-limit locking by creating and locking the stock counter row before checking and incrementing inventory.
-- Verified the commit primitive is executable by `service_role`, not by `authenticated` or `anon`; Supabase security advisor reports no findings.
-- Deployed the authenticated `game-session` Edge Function (JWT verification enabled). It validates the caller's Supabase Auth session and reads only that caller's player state and profile through RLS.
-- Committed the Edge Function source to `supabase/functions/game-session/index.ts`.
-- Added a typed frontend helper at `src/lib/supabase-game-session.ts` for invoking the authenticated session endpoint.
+- Extracted and inspected the uploaded archive and identified the game runtime and Firebase dependencies.
+- Created isolated branch `remix/supabase-android-independent`; the original `main` branch remains untouched.
+- Selected Supabase project `CapitalfortuneViz` in `eu-central-1`.
+- Applied database foundation and atomic commit migrations. Eleven RLS-protected tables are present.
+- Added a service-role-only atomic player commit RPC and a public wrapper that rejects non-service-role callers.
+- Deployed authenticated Edge Functions `game-session` and `game-action` (JWT verification enabled).
+- Routed the main game hook's session load, actions and click batches to `game-action`.
+- Migrated landing, sign-in/sign-up, guest auth, authenticated route guard, root auth listener, and game-shell sign-out/listener from Firebase Auth to Supabase Auth.
+- Removed Firebase token attachment from TanStack Start server-function middleware.
+- Added GitHub Actions verification workflow for npm install, lint, unit tests and production web build.
 
-## Not yet completed
-- The session helper is not yet wired into the route tree or game hook; the app still uses Firebase.
-- `game-session` is a read/bootstrap endpoint; it does not yet execute game actions or call the atomic commit primitive.
-- The original game engine (businesses, property, markets, banking, casino, collectibles, achievements and corporation rules) still needs to be ported into trusted Edge Function code.
-- Supabase Auth UI, Storage buckets/policies and game seed data remain to be implemented.
-- Corporation membership/public projection synchronization and collectible stock seed data remain outstanding.
-- Capacitor configuration, Android project generation, Android build, emulator/device verification and release signing remain outstanding.
-- No installable APK or deployable independent web release has been produced.
+## Outstanding — release is not verified
+- Many secondary game systems and route data functions still use Firestore through `src/lib/game.functions.ts`. Corporation, market, bank, casino, leaderboard, collectible and other systems are not fully ported. The Edge Function currently rejects unsupported corporation/casino actions.
+- Supabase Auth provider settings (Google OAuth and anonymous/guest auth) need to be enabled/configured in the Supabase dashboard and tested with a real account.
+- The Supabase game endpoint has not yet passed an authenticated end-to-end gameplay/persistence test.
+- The latest GitHub Actions run is in progress; prior verification runs were cancelled or failed. No successful production build is confirmed yet.
+- No deployable independent web release has been produced.
+- Capacitor setup, Android project generation, Android build, emulator/device verification and release signing remain outstanding.
+- No installable APK has been produced.
 
 ## Security constraints
 - No service-role or secret key in frontend code, `VITE_*` variables or APK assets.
