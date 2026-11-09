@@ -60,8 +60,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: android-actions/setup-android@v4
       - name: Install Android SDK packages
-        run: SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}" && export PATH="$SDK_ROOT/cmdline-tools/16.0/bin:$SDK_ROOT/platform-tools:$PATH" && yes | "$SDK_ROOT/cmdline-tools/16.0/bin/sdkmanager" --licenses && "$SDK_ROOT/cmdline-tools/16.0/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Install dependencies
         run: corepack enable && pnpm install --no-frozen-lockfile
       - name: Build web assets
