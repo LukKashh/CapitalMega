@@ -37,7 +37,12 @@
           "description": "Timestamp of last action in milliseconds"
         }
       },
-      "required": ["userId", "username", "version", "state"]
+      "required": [
+        "userId",
+        "username",
+        "version",
+        "state"
+      ]
     },
     "Corporation": {
       "title": "Corporation",
@@ -81,7 +86,14 @@
           "description": "Last update timestamp"
         }
       },
-      "required": ["id", "name", "tag", "founderId", "version", "state"]
+      "required": [
+        "id",
+        "name",
+        "tag",
+        "founderId",
+        "version",
+        "state"
+      ]
     },
     "LedgerEntry": {
       "title": "LedgerEntry",
@@ -122,7 +134,13 @@
           "description": "Timestamp entry was recorded"
         }
       },
-      "required": ["id", "type", "source", "destination", "amount"]
+      "required": [
+        "id",
+        "type",
+        "source",
+        "destination",
+        "amount"
+      ]
     },
     "CollectibleStock": {
       "title": "CollectibleStock",
@@ -143,7 +161,10 @@
           "description": "Last stock purchase timestamp"
         }
       },
-      "required": ["itemId", "sold"]
+      "required": [
+        "itemId",
+        "sold"
+      ]
     },
     "UsernameRecord": {
       "title": "UsernameRecord",
@@ -165,7 +186,10 @@
           "description": "Registration timestamp"
         }
       },
-      "required": ["username", "userId"]
+      "required": [
+        "username",
+        "userId"
+      ]
     },
     "AdminRecord": {
       "title": "AdminRecord",
@@ -192,7 +216,9 @@
           "description": "Timestamp when admin role was granted"
         }
       },
-      "required": ["userId"]
+      "required": [
+        "userId"
+      ]
     },
     "AdminAudit": {
       "title": "AdminAudit",
@@ -261,6 +287,119 @@
         "resultingLevel",
         "createdAt"
       ]
+    },
+    "PublicPlayer": {
+      "title": "PublicPlayer",
+      "description": "Minimal public ranking projection; excludes private player save data",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "level": {
+          "type": "number"
+        },
+        "netWorth": {
+          "type": "number"
+        },
+        "liquid": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "avatar": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "corpTag": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 8
+        },
+        "corpId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "updatedAt": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "userId",
+        "username",
+        "level",
+        "netWorth",
+        "liquid",
+        "title",
+        "avatar",
+        "corpTag",
+        "corpId",
+        "updatedAt"
+      ]
+    },
+    "PublicCorporation": {
+      "title": "PublicCorporation",
+      "description": "Lightweight public ranking projection, maintained with corporation saves",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 48
+        },
+        "tag": {
+          "type": "string",
+          "maxLength": 8
+        },
+        "level": {
+          "type": "number"
+        },
+        "xp": {
+          "type": "number"
+        },
+        "activity": {
+          "type": "number"
+        },
+        "valuation": {
+          "type": "number"
+        },
+        "treasury": {
+          "type": "number"
+        },
+        "membersCount": {
+          "type": "number"
+        },
+        "dissolved": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "tag",
+        "level",
+        "xp",
+        "activity",
+        "valuation",
+        "treasury",
+        "membersCount",
+        "dissolved"
+      ]
     }
   },
   "firestore": {
@@ -291,6 +430,14 @@
     "/admin_audit/{entryId}": {
       "schema": "AdminAudit",
       "description": "Audit trail entries for administrative data adjustments"
+    },
+    "/public_players/{userId}": {
+      "schema": "PublicPlayer",
+      "description": "Minimal public leaderboard data; excludes private player saves"
+    },
+    "/public_corporations/{corpId}": {
+      "schema": "PublicCorporation",
+      "description": "Lightweight public corporation leaderboard projection"
     }
   }
 }
