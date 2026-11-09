@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BALANCE } from "@/game/config";
 import { toast } from "sonner";
-import { gameAction, getGame } from "@/lib/game.functions";
+import { getSupabaseGame, submitSupabaseGameAction } from "@/integrations/supabase/game-actions";
 import type { Action } from "@/game/engine";
 import type { CorpAction } from "@/game/corp";
 import type { CorpState, PlayerState } from "@/game/types";
@@ -21,7 +21,7 @@ export function useGame() {
   return useQuery({
     queryKey: GAME_KEY,
     queryFn: async (): Promise<GameData> => {
-      const r = await getGame();
+      const r = await getSupabaseGame();
       if (!r.ok) throw new Error(r.error);
       return {
         now: r.now,
@@ -58,7 +58,7 @@ export function useAct() {
       success?: string;
       silent?: boolean;
     }) => {
-      const r = await gameAction({ data: { key: vars.key, action: vars.action } });
+      const r = await submitSupabaseGameAction({ key: vars.key, action: vars.action as Action });
       if (!r.ok) throw new Error(r.error);
       return { r, vars };
     },
@@ -172,9 +172,7 @@ export function useClicker() {
 
     let committed = false;
     try {
-      const r = await gameAction({
-        data: { key: batch.key, action: { type: "click", count: batch.count } },
-      });
+      const r = await submitSupabaseGameAction({ key: batch.key, action: { type: "click", count: batch.count } });
       if (!r.ok) throw new Error(r.error || "Click batch could not be saved");
 
       const prev = qc.getQueryData<GameData>(GAME_KEY);
