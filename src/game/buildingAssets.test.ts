@@ -52,12 +52,10 @@ describe("Building Asset Catalogue", () => {
     expect(bizOffice.sourceUrl).not.toBe(realOffice.sourceUrl);
   });
 
-  it("ensures all registered image URLs are direct ImgBB URLs", () => {
+  it("ensures every registered image uses a bundled local asset", () => {
     for (const asset of BUILDING_ASSET_CATALOGUE) {
-      expect(asset.sourceUrl).toMatch(
-        /^https:\/\/i\.ibb\.co\/[a-zA-Z0-9_-]+\/[0-9a-zA-Z_-]+\.png$/,
-      );
-      expect(asset.localFallback).toBeTruthy();
+      expect(asset.sourceUrl).toMatch(/^\/assets\/game\/catalogue\/bld-\d{3}\.png$/);
+      expect(asset.sourceUrl).toBe(asset.localFallback);
     }
   });
 
