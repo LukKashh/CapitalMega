@@ -346,10 +346,12 @@ async function run(
             dissolved: corpOut.dissolve,
             updatedAt: now,
           });
-          tx.set(doc(db, "public_corporations", corpOut.id), {
-            ...corporationLeaderboardEntry(corpOut.id, corpOut.state),
-            dissolved: corpOut.dissolve,
-          });
+          const publicCorpRef = doc(db, "public_corporations", corpOut.id);
+          if (corpOut.dissolve) {
+            tx.delete(publicCorpRef);
+          } else {
+            tx.set(publicCorpRef, corporationLeaderboardEntry(corpOut.id, corpOut.state));
+          }
         }
 
         for (const l of ctx.ledger) {
