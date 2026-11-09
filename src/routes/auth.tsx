@@ -15,14 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { art } from "@/components/game/art";
-import {
-  auth as firebaseAuth,
-  onAuthStateChanged,
-  signInWithGoogle,
-  loginWithEmail,
-  registerWithEmail,
-  loginAsGuest,
-} from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>): { mode?: "signin" | "signup" } => ({
@@ -53,11 +46,14 @@ function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (firebaseAuth.currentUser) navigate({ to: "/home", replace: true });
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
-      if (user) navigate({ to: "/home", replace: true });
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) navigate({ to: "/home", replace: true });
     });
-    return () => unsubscribe();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) navigate({ to: "/home", replace: true });
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, [navigate]);
 
   async function submit(e: React.FormEvent) {
@@ -65,10 +61,12 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        await registerWithEmail(email.trim(), password);
+        const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+        if (error) throw error;
         toast.success("Account created successfully!");
       } else {
-        await loginWithEmail(email.trim(), password);
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (error) throw error;
         toast.success("Signed in successfully!");
       }
       navigate({ to: "/home", replace: true });
@@ -82,7 +80,8 @@ function AuthPage() {
   async function google() {
     setBusy(true);
     try {
-      await signInWithGoogle();
+      const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/home` } });
+      if (error) throw error;
       toast.success("Signed in with Google!");
       navigate({ to: "/home", replace: true });
     } catch (err: unknown) {
@@ -95,8 +94,8 @@ function AuthPage() {
   async function guest() {
     setBusy(true);
     try {
-      if (typeof window !== "undefined") localStorage.setItem("guest_mode", "true");
-      await loginAsGuest();
+      const { error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
       toast.success("Playing as Guest!");
       navigate({ to: "/home", replace: true });
     } catch (err: unknown) {
@@ -153,7 +152,7 @@ function AuthPage() {
             </div>
           </div>
           <div className="mt-8 flex items-center gap-2 text-xs text-slate-400">
-            <ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure sign-in powered by Firebase
+            <ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure sign-in powered by Supabase
           </div>
         </section>
 
