@@ -8,9 +8,6 @@ on:
 permissions:
   contents: read
 
-env:
-  CI: true
-
 jobs:
   build-apk:
     name: Build debug APK
@@ -20,22 +17,8 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm install --package-lock=false
-
-      - name: Add Capacitor Android platform
-        run: npx cap add android
-
-      - name: Build web application
-        run: npm run build
-
-      - name: Sync Capacitor assets
-        run: npx cap sync android
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -43,14 +26,26 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate Android project
+        run: |
+          if [ ! -d android ]; then
+            bunx cap add android
+          fi
+          bunx cap sync android
+          chmod +x android/gradlew
+
+      - name: Build web application
+        run: bun run build
+
+      - name: Sync packaged web assets
+        run: bunx cap sync android
 
       - name: Compile debug APK
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
 
       - name: Verify APK
         run: test -s android/app/build/outputs/apk/debug/app-debug.apk
