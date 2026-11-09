@@ -92,11 +92,12 @@ function Roulette({cs}:{cs:CasinoState}) {
  const add=(kind:RouletteBet["kind"],value?:number)=>{if(amt<1)return;setBets(x=>{const i=x.findIndex(b=>b.kind===kind&&b.value===value);return i>=0?x.map((b,j)=>j===i?{...b,amount:b.amount+amt}:b):[...x,(value===undefined?{kind,amount:amt}:{kind,value,amount:amt})]})};
  const on=(kind:string,value?:number)=>bets.find(b=>b.kind===kind&&b.value===value)?.amount;
  const n=cs.last?.game==="roulette"?cs.last.detail.number as number:null;
+ const [showSpin,setShowSpin]=useState(false);
  const outcomeClass=n===null?"":n===0?"is-green":RED.has(n)?"is-red":"is-black";
  const wheelOrder=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
  return <GamePanel className="cf-roulette-panel">
   <div className="cf-table-title-row"><div><span className="cf-eyebrow">EUROPEAN ROULETTE</span><h2>Place your bets</h2></div><span className="cf-house-mark">CAPITAL <b>CLUB</b></span></div>
-  <div className={`cf-wheel-wrap ${pending?"is-spinning":""}`}>
+  <div className={`cf-wheel-wrap ${showSpin?"is-spinning":""}`} onAnimationEnd={()=>setShowSpin(false)}>
    <div className="cf-wheel-halo"/>
    <div className="cf-wheel-outer">
     <div className="cf-wheel-track"/>
@@ -118,7 +119,7 @@ function Roulette({cs}:{cs:CasinoState}) {
    ].map(([kind,label])=><button key={kind} onClick={()=>add(kind as RouletteBet["kind"])} className={`cf-outside-${kind} ${on(kind)?"is-selected":""}`}>{label}{on(kind)&&<i>{fmt(on(kind)!)}</i>}</button>)}</div>
   </div>
   <div className="cf-bet-footer"><BetInput bet={bet} setBet={setBet} chips={cs.chips}/><div className="cf-total-wager"><span>TOTAL ON TABLE</span><strong>{fmt(total)} <small>CHIPS</small></strong></div></div>
-  <div className="cf-game-actions"><Button variant="outline" disabled={!bets.length||pending} onClick={()=>setBets([])}>CLEAR BETS</Button><Button disabled={pending||!bets.length||total>cs.chips} onClick={()=>run({type:"casinoRoulette",bets})} className="cf-primary-action">{pending?"WHEEL SPINNING…":"SPIN THE WHEEL"}</Button></div>
+  <div className="cf-game-actions"><Button variant="outline" disabled={!bets.length||pending} onClick={()=>setBets([])}>CLEAR BETS</Button><Button disabled={pending||!bets.length||total>cs.chips} onClick={()=>{setShowSpin(true);run({type:"casinoRoulette",bets});}} className="cf-primary-action">{pending?"WHEEL SPINNING…":"SPIN THE WHEEL"}</Button></div>
   <TableResult cs={cs} game="roulette"/>
  </GamePanel>;
 }
@@ -160,15 +161,16 @@ function Keno({cs}:{cs:CasinoState}) {
  const {run,pending}=useAct(); const [bet,setBet]=useState("10"); const [picks,setPicks]=useState<number[]>([]);
  const last=cs.last?.game==="keno"?cs.last.detail as {draw:number[];picks:number[];hits:number;mult:number}:null;
  const drawn=new Set(last?.draw??[]);
+ const [drawAnimation,setDrawAnimation]=useState(false);
  const toggle=(n:number)=>setPicks(p=>p.includes(n)?p.filter(x=>x!==n):p.length<10?[...p,n]:p);
  return <GamePanel className="cf-keno-panel">
   <div className="cf-table-title-row"><div><span className="cf-eyebrow">LUCKY DRAW · 01—80</span><h2>Pick your numbers</h2></div><span className="cf-mines-badge">{picks.length}/10 PICKS</span></div>
   <div className="cf-keno-stage">
    <div className="cf-keno-orbit"><div className="cf-keno-ball">✦</div><span>20 NUMBERS DRAWN</span></div>
-   <div className="cf-keno-grid">{Array.from({length:80},(_,i)=>i+1).map(n=><button key={n} onClick={()=>toggle(n)} disabled={pending} className={`cf-keno-number ${picks.includes(n)?"is-picked":""} ${drawn.has(n)?"is-drawn":""} ${drawn.has(n)&&picks.includes(n)?"is-hit":""}`}>{n}</button>)}</div>
+   <div className={`cf-keno-grid ${drawAnimation?"is-drawing":""}`} onAnimationEnd={()=>setDrawAnimation(false)}>{Array.from({length:80},(_,i)=>i+1).map(n=><button key={n} onClick={()=>toggle(n)} disabled={pending} className={`cf-keno-number ${picks.includes(n)?"is-picked":""} ${drawn.has(n)?"is-drawn":""} ${drawn.has(n)&&picks.includes(n)?"is-hit":""}`}>{n}</button>)}</div>
    {last&&<div className="cf-keno-summary"><strong>{last.hits} / {last.picks.length}</strong><span>NUMBERS MATCHED · {last.mult.toFixed(2)}× PAYOUT</span></div>}
   </div>
-  <div className="cf-new-round"><BetInput bet={bet} setBet={setBet} chips={cs.chips}/><div className="cf-keno-actions"><Button variant="outline" disabled={pending} onClick={()=>setPicks(picks.length?[]:Array.from({length:80},(_,i)=>i+1).sort(()=>Math.random()-.5).slice(0,10))}>{picks.length?"CLEAR PICKS":"QUICK PICK"}</Button><Button className="cf-primary-action" disabled={pending||!picks.length||!(Number(bet)>=1)||Number(bet)>cs.chips} onClick={()=>run({type:"casinoKeno",bet:Number(bet),picks})}>DRAW NUMBERS</Button></div></div>
+  <div className="cf-new-round"><BetInput bet={bet} setBet={setBet} chips={cs.chips}/><div className="cf-keno-actions"><Button variant="outline" disabled={pending} onClick={()=>setPicks(picks.length?[]:Array.from({length:80},(_,i)=>i+1).sort(()=>Math.random()-.5).slice(0,10))}>{picks.length?"CLEAR PICKS":"QUICK PICK"}</Button><Button className="cf-primary-action" disabled={pending||!picks.length||!(Number(bet)>=1)||Number(bet)>cs.chips} onClick={()=>{setDrawAnimation(true);run({type:"casinoKeno",bet:Number(bet),picks});}}>DRAW NUMBERS</Button></div></div>
   <TableResult cs={cs} game="keno"/>
  </GamePanel>;
 }
