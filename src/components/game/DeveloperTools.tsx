@@ -5,13 +5,16 @@ import {
   Code2,
   Globe,
   Monitor,
+  Search,
   ShieldCheck,
   UserRound,
+  Wallet,
   Wifi,
   WifiOff,
+  Zap,
 } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, runTransaction } from "firebase/firestore";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +23,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { EMPTY_MODS } from "@/game/config";
+import { gainXp, netWorth, personalMods, xpForLevel, type Ctx } from "@/game/engine";
+import type { PlayerState } from "@/game/types";
 
 const ADMIN_EMAILS = new Set([
   "puncisters@gmail.com",
@@ -45,9 +51,47 @@ type DeveloperToolsDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+type PlayerRecord = {
+  uid: string;
+  username: string;
+  level: number;
+  xp: number;
+  cash: number;
+  version: number;
+  state: PlayerState;
+};
+
+type AdjustmentKind = "set-balance" | "add-balance" | "subtract-balance" | "grant-xp" | "set-xp";
+const MAX_ADJUSTMENT = 1_000_000_000_000_000;
+
+const fieldClass =
+  "h-10 w-full rounded-lg border border-white/10 bg-[#0b0e17] px-3 text-sm text-white outline-none transition focus:border-violet-400/60";
+const labelClass = "mb-1.5 block text-xs font-medium text-slate-400";
+
+function readPlayer(uid: string, data: Record<string, unknown>): PlayerRecord {
+  const state = data.state as PlayerState;
+  if (!state || typeof state !== "object") throw new Error("Player save has no valid state.");
+  return {
+    uid,
+    username: String(data.username ?? state.username ?? "Unknown player"),
+    level: Number(state.level ?? data.level ?? 1),
+    xp: Number(state.xp ?? 0),
+    cash: Number(state.cash ?? 0),
+    version: Number(data.version ?? 0),
+    state,
+  };
+}
+
 export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialogProps) {
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [viewport, setViewport] = useState("—");
+  const [lookup, setLookup] = useState("");
+  const [player, setPlayer] = useState<PlayerRecord | null>(null);
+  const [kind, setKind] = useState<AdjustmentKind>("set-balance");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
   const user = auth.currentUser;
 
   useEffect(() => {
@@ -65,6 +109,16 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      setLookup("");
+      setPlayer(null);
+      setAmount("");
+      setNotice("");
+      setError("");
+    }
+  }, [open]);
+
   const diagnostics = [
     {
       label: "Authentication",
@@ -76,19 +130,14 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     {
       label: "Network",
       value: online ? "Online" : "Offline",
-      detail: online
-        ? "Browser reports an active connection"
-        : "Browser reports no network connection",
+      detail: online ? "Browser reports an active connection" : "Browser reports no network connection",
       icon: online ? Wifi : WifiOff,
       ok: online,
     },
     {
       label: "Runtime",
       value: typeof window === "undefined" ? "Server" : "Browser",
-      detail:
-        typeof window === "undefined"
-          ? "Server rendering context"
-          : "Client-side application runtime",
+      detail: typeof window === "undefined" ? "Server rendering context" : "Client-side application runtime",
       icon: Globe,
       ok: true,
     },
@@ -101,6 +150,158 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     },
   ];
 
+  async function findPlayer() {
+    const term = lookup.trim();
+    if (!term) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    setPlayer(null);
+    try {
+      let uid = term;
+      if (!term.includes("@") && term.length <= 32 && !term.includes("/")) {
+        const usernameSnap = await getDoc(doc(db, "usernames", term.toLowerCase()));
+        if (usernameSnap.exists()) uid = String(usernameSnap.data().userId ?? term);
+      }
+      const playerSnap = await getDoc(doc(db, "player_states", uid));
+      if (!playerSnap.exists()) throw new Error("No player save was found for that username or Firebase UID.");
+      setPlayer(readPlayer(uid, playerSnap.data() as Record<string, unknown>));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to retrieve player data.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyAdjustment() {
+    if (!player || !user) return;
+    const parsed = Number(amount);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_ADJUSTMENT) {
+      setError("Enter a valid non-negative number within the supported limit.");
+      return;
+    }
+    if ((kind === "add-balance" || kind === "subtract-balance" || kind === "grant-xp") && parsed <= 0) {
+      setError("This operation requires an amount greater than zero.");
+      return;
+    }
+    if (kind === "set-xp" && parsed >= xpForLevel(player.level)) {
+      setError(`Current-level XP must be below ${xpForLevel(player.level).toLocaleString()}.`);
+      return;
+    }
+
+    const operationLabels: Record<AdjustmentKind, string> = {
+      "set-balance": "Set wallet balance",
+      "add-balance": "Add wallet balance",
+      "subtract-balance": "Subtract wallet balance",
+      "grant-xp": "Grant XP through progression",
+      "set-xp": "Set current-level XP progress",
+    };
+    const confirmed = window.confirm(
+      `${operationLabels[kind]} for ${player.username} (${player.uid})?\n\nEntered value: ${parsed.toLocaleString()}\nThis action will be recorded in the administrator audit log.`,
+    );
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const playerRef = doc(db, "player_states", player.uid);
+      const auditRef = doc(db, "admin_audit", crypto.randomUUID());
+      const now = Date.now();
+      const result = await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(playerRef);
+        if (!snapshot.exists()) throw new Error("Player save no longer exists.");
+        const row = snapshot.data();
+        const currentVersion = Number(row.version ?? 0);
+        if (currentVersion !== player.version) {
+          throw new Error("Player data changed since lookup. Search for the player again before applying an adjustment.");
+        }
+        const current = row.state as PlayerState;
+        if (!current || typeof current !== "object") throw new Error("Player save has no valid state.");
+        const state = JSON.parse(JSON.stringify(current)) as PlayerState;
+        const before = kind.includes("balance") ? Number(state.cash ?? 0) : Number(state.xp ?? 0);
+        let after = before;
+
+        if (kind === "set-balance") after = parsed;
+        if (kind === "add-balance") after = before + parsed;
+        if (kind === "subtract-balance") after = before - parsed;
+        if (kind === "grant-xp") {
+          const ctx: Ctx = {
+            s: state,
+            now,
+            ledger: [],
+            stock: [],
+            corpMods: EMPTY_MODS,
+          };
+          gainXp(ctx, parsed, personalMods(state));
+          after = state.xp;
+        }
+        if (kind === "set-xp") {
+          state.xp = parsed;
+          after = parsed;
+        }
+        if (!Number.isFinite(after) || after < 0 || after > MAX_ADJUSTMENT) {
+          throw new Error("The resulting value is outside the supported range.");
+        }
+        if (kind === "set-balance" || kind === "add-balance" || kind === "subtract-balance") {
+          state.cash = after;
+        }
+        if (kind === "grant-xp" || kind === "set-xp") {
+          if (!Number.isFinite(state.level) || state.level < 1) throw new Error("Player level is invalid.");
+        }
+
+        const calculated = netWorth(state, now);
+        const version = currentVersion + 1;
+        transaction.set(playerRef, {
+          ...row,
+          userId: player.uid,
+          username: state.username || row.username || "Player",
+          level: state.level || 1,
+          netWorth: Math.max(0, Math.round(calculated.total)),
+          liquid: state.cash + state.reservedCash,
+          title: state.profile?.title || "Aspiring Tycoon",
+          avatar: state.profile?.avatar || "briefcase",
+          corpTag: row.corpTag ?? null,
+          version,
+          state,
+          updatedAt: now,
+        });
+        transaction.set(auditRef, {
+          actorUid: user.uid,
+          actorEmail: user.email ?? null,
+          targetUid: player.uid,
+          targetUsername: state.username || player.username,
+          operation: kind,
+          enteredAmount: parsed,
+          previousValue: before,
+          resultingValue: after,
+          previousLevel: current.level,
+          resultingLevel: state.level,
+          createdAt: now,
+        });
+        return { state, version, calculatedTotal: calculated.total, after };
+      });
+      setPlayer({
+        uid: player.uid,
+        username: result.state.username,
+        level: result.state.level,
+        xp: result.state.xp,
+        cash: result.state.cash,
+        version: result.version,
+        state: result.state,
+      });
+      setAmount("");
+      setNotice(`${operationLabels[kind]} completed. New wallet: ${result.state.cash.toLocaleString()} · Level ${result.state.level} · XP ${result.state.xp.toLocaleString()}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The adjustment could not be applied.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const balanceOperation = kind.includes("balance");
+  const xpOperation = kind === "grant-xp" || kind === "set-xp";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="developer-tools-dialog w-[calc(100vw-1rem)] max-w-3xl max-h-[92dvh] overflow-y-auto border-white/10 bg-[#10131d] p-0 text-white">
@@ -109,20 +310,16 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 text-violet-200">
               <Code2 className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
-              Developer Console
-            </DialogTitle>
+            <DialogTitle className="text-xl font-semibold tracking-tight sm:text-2xl">Developer Console</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Restricted diagnostic workspace for authorized Capitalfortune administrators.
+              Restricted diagnostic and development workspace for authorized Capitalfortune administrators.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-5 flex flex-wrap items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-emerald-300">
               <CheckCircle2 className="h-3.5 w-3.5" /> Administrator access
             </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300">
-              Read-only diagnostics
-            </span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300">Diagnostics + player data controls</span>
           </div>
         </div>
 
@@ -133,17 +330,10 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {diagnostics.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-xl border border-white/10 bg-white/[0.035] p-4"
-                >
+                <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                      {item.label}
-                    </span>
-                    <item.icon
-                      className={`h-4 w-4 ${item.ok ? "text-emerald-300" : "text-amber-300"}`}
-                    />
+                    <span className="text-xs font-medium uppercase tracking-wider text-slate-400">{item.label}</span>
+                    <item.icon className={`h-4 w-4 ${item.ok ? "text-emerald-300" : "text-amber-300"}`} />
                   </div>
                   <div className="mt-2 text-base font-semibold text-white">{item.value}</div>
                   <p className="mt-1 text-xs leading-relaxed text-slate-400">{item.detail}</p>
@@ -152,44 +342,89 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             </div>
           </section>
 
+          <section className="rounded-xl border border-violet-400/20 bg-violet-400/[0.045] p-4 sm:p-5">
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-100">
+              <Wallet className="h-4 w-4 text-violet-300" /> Player Data Controls
+            </div>
+            <p className="mb-4 text-xs leading-relaxed text-slate-400">
+              Development-only adjustments to a player's wallet balance and progression. Every applied change is recorded in the administrator audit log.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                className={fieldClass}
+                value={lookup}
+                onChange={(event) => setLookup(event.target.value)}
+                onKeyDown={(event) => { if (event.key === "Enter") void findPlayer(); }}
+                placeholder="Player username or Firebase UID"
+                aria-label="Player username or Firebase UID"
+              />
+              <Button onClick={() => void findPlayer()} disabled={busy || !lookup.trim()} className="h-10 shrink-0 bg-violet-600 text-white hover:bg-violet-500">
+                <Search className="mr-2 h-4 w-4" /> Find player
+              </Button>
+            </div>
+
+            {player && (
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-1 gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2">
+                  <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Username</div><div className="mt-1 font-semibold text-white">{player.username}</div></div>
+                  <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Firebase UID</div><div className="mt-1 break-all font-mono text-xs text-slate-300">{player.uid}</div></div>
+                  <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Wallet balance</div><div className="mt-1 font-semibold text-emerald-300">{player.cash.toLocaleString()}</div></div>
+                  <div><div className="text-[11px] uppercase tracking-wide text-slate-500">Player level</div><div className="mt-1 font-semibold text-white">{player.level}</div></div>
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between text-xs text-slate-400"><span>Current-level XP</span><span>{player.xp.toLocaleString()} / {xpForLevel(player.level).toLocaleString()}</span></div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-violet-400" style={{ width: `${Math.min(100, (player.xp / xpForLevel(player.level)) * 100)}%` }} /></div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr]">
+                  <div>
+                    <label className={labelClass} htmlFor="admin-adjustment-kind">Adjustment</label>
+                    <select id="admin-adjustment-kind" className={fieldClass} value={kind} onChange={(event) => setKind(event.target.value as AdjustmentKind)}>
+                      <optgroup label="Wallet balance">
+                        <option value="set-balance">Set balance</option>
+                        <option value="add-balance">Add balance</option>
+                        <option value="subtract-balance">Subtract balance</option>
+                      </optgroup>
+                      <optgroup label="Player XP">
+                        <option value="grant-xp">Grant XP (normal progression)</option>
+                        <option value="set-xp">Set current-level XP progress</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="admin-adjustment-amount">{kind === "set-xp" ? "Current-level XP" : balanceOperation ? "Cash amount" : "XP amount"}</label>
+                    <input id="admin-adjustment-amount" className={fieldClass} type="number" min="0" max={MAX_ADJUSTMENT} step="any" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter amount" />
+                  </div>
+                </div>
+                {kind === "grant-xp" && <p className="text-xs text-slate-500">Uses the existing XP multiplier, level-up, notification and level-reward progression logic.</p>}
+                {kind === "set-xp" && <p className="text-xs text-slate-500">Sets progress within the current level only; it cannot trigger a level-up.</p>}
+                {balanceOperation && <p className="text-xs text-slate-500">Only the player's wallet cash is changed. Bank deposits, loans and corporation funds remain untouched.</p>}
+                {xpOperation && <p className="text-xs text-slate-500">Direct XP adjustments do not create a wallet adjustment entry in the normal financial ledger.</p>}
+                <Button onClick={() => void applyAdjustment()} disabled={busy || amount.trim() === ""} className="w-full bg-violet-600 text-white hover:bg-violet-500">
+                  <Zap className="mr-2 h-4 w-4" /> {busy ? "Applying…" : "Review and apply adjustment"}
+                </Button>
+              </div>
+            )}
+            {notice && <p role="status" className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-3 text-xs text-emerald-300">{notice}</p>}
+            {error && <p role="alert" className="mt-3 rounded-lg border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-300">{error}</p>}
+          </section>
+
           <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
               <UserRound className="h-4 w-4 text-violet-300" /> Current administrator session
             </div>
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-slate-500">Email</dt>
-                <dd className="mt-1 break-all text-slate-200">{user?.email ?? "Unavailable"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-500">Email verification</dt>
-                <dd className="mt-1 text-slate-200">
-                  {user?.emailVerified ? "Verified" : "Not verified / unavailable"}
-                </dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-xs text-slate-500">Firebase user ID</dt>
-                <dd className="mt-1 break-all font-mono text-xs text-slate-300">
-                  {user?.uid ?? "Unavailable"}
-                </dd>
-              </div>
+              <div><dt className="text-xs text-slate-500">Email</dt><dd className="mt-1 break-all text-slate-200">{user?.email ?? "Unavailable"}</dd></div>
+              <div><dt className="text-xs text-slate-500">Email verification</dt><dd className="mt-1 text-slate-200">{user?.emailVerified ? "Verified" : "Not verified / unavailable"}</dd></div>
+              <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Firebase user ID</dt><dd className="mt-1 break-all font-mono text-xs text-slate-300">{user?.uid ?? "Unavailable"}</dd></div>
             </dl>
           </section>
 
           <p className="text-xs leading-relaxed text-slate-500">
-            This console currently exposes diagnostics only. It does not modify player saves,
-            balances, accounts, or live game data. Authorization is checked against the existing
-            Firestore administrator policy; Firestore security rules remain the enforcement
-            boundary.
+            Administrative writes use Firestore transactions, reject stale player versions, and create an append-only audit record. Firestore security rules enforce administrator access independently of this interface.
           </p>
           <div className="flex justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="border-white/15 bg-white/5 text-white hover:bg-white/10"
-            >
-              Close console
-            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-white/15 bg-white/5 text-white hover:bg-white/10">Close console</Button>
           </div>
         </div>
       </DialogContent>
