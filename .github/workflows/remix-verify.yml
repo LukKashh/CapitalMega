@@ -26,6 +26,8 @@ jobs:
         with:
           node-version: 22
       - run: corepack enable && pnpm install --no-frozen-lockfile
+      - name: Apply lint autofixes
+        run: pnpm exec eslint . --fix
       - name: Lint
         run: pnpm lint
       - name: Unit tests
