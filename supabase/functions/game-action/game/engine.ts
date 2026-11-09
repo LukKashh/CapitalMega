@@ -12,7 +12,6 @@ import {
   type GlobalMods,
 } from "./config.ts";
 import { applyCasino, casinoOf, type CasinoAction } from "./casino.ts";
-import { casinoLoyaltyTier } from "./casino-loyalty.ts";
 import {
   COLLECTIBLE_BY_ID,
   COLLECTIONS,
@@ -1573,15 +1572,6 @@ export function apply(c: Ctx, a: Action) {
     case "casinoHilo":
       if (!c.casinoSeed) throw new GameError("Casino unavailable");
       applyCasino(s, a, c.casinoSeed, c.now);
-      {
-        const casino = casinoOf(s);
-        const loyalty = s.casinoLoyalty ?? (s.casinoLoyalty = { points: 0, tier: "bronze", rewardsClaimed: [], streak: 0, lastVisitAt: 0 });
-        if (casino.stats.wagered > 0) {
-          loyalty.points = Math.max(0, Math.floor(casino.stats.wagered));
-          loyalty.tier = casinoLoyaltyTier(loyalty.points);
-        }
-        loyalty.lastVisitAt = c.now;
-      }
       break;
     case "sellProperty": {
       const pr = s.properties[a.inst];
