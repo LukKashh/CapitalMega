@@ -50,12 +50,14 @@ export function PageHeader({
   right?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
+    <div className="game-page-header mb-4 flex min-w-0 items-end justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <h1 className="game-page-title text-2xl font-bold">{title}</h1>
+        {subtitle && (
+          <p className="game-page-subtitle mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+        )}
       </div>
-      {right}
+      {right && <div className="shrink-0">{right}</div>}
     </div>
   );
 }
