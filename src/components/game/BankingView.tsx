@@ -107,7 +107,12 @@ export function BankingView() {
     { id: "overview", label: "Overview", description: "Financial snapshot", icon: Wallet },
     { id: "institutions", label: "Institutions", description: "Browse banks", icon: Landmark },
     { id: "accounts", label: "My Accounts", description: "Balances and access", icon: Building2 },
-    { id: "payments", label: "Payments", description: "Deposits and withdrawals", icon: ArrowDownRight },
+    {
+      id: "payments",
+      label: "Payments",
+      description: "Deposits and withdrawals",
+      icon: ArrowDownRight,
+    },
     { id: "loans", label: "Loans", description: "Credit and repayments", icon: CreditCard },
     { id: "services", label: "Services", description: "Income routing", icon: Building },
     { id: "activity", label: "Activity", description: "Transaction history", icon: History },
@@ -267,7 +272,7 @@ export function BankingView() {
       <div className="grid min-w-0 gap-4 md:grid-cols-[190px_minmax(0,1fr)]">
         <nav
           aria-label="Banking sections"
-          className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:flex md:flex-col md:self-start"
+          className="flex min-w-0 gap-2 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0 md:self-start"
         >
           {bankingSections.map((section) => {
             const Icon = section.icon;
@@ -279,7 +284,7 @@ export function BankingView() {
                 aria-current={active ? "page" : undefined}
                 onClick={() => setBankAppTab(section.id)}
                 className={cn(
-                  "flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left transition-colors md:w-full",
+                  "flex min-w-[112px] shrink-0 items-center gap-2 rounded-xl border px-2.5 py-2.5 text-left transition-colors md:w-full md:px-3 md:py-3",
                   active
                     ? "border-primary/50 bg-primary/10 text-primary shadow-sm"
                     : "border-border/70 bg-card/70 text-foreground hover:border-primary/40 hover:bg-muted/70",
@@ -295,7 +300,7 @@ export function BankingView() {
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-xs font-bold">{section.label}</span>
-                  <span className="mt-0.5 hidden truncate text-[10px] text-muted-foreground sm:block">
+                  <span className="mt-0.5 hidden truncate text-[10px] text-muted-foreground md:block">
                     {section.description}
                   </span>
                 </span>
@@ -334,9 +339,12 @@ export function BankingView() {
                   <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Bank reserves
                   </div>
-                  <div className="num text-lg font-black text-foreground">{money(totalBankReserves)}</div>
+                  <div className="num text-lg font-black text-foreground">
+                    {money(totalBankReserves)}
+                  </div>
                   <div className="text-[10px] text-muted-foreground">
-                    Across {registeredBankIds.length} active account{registeredBankIds.length === 1 ? "" : "s"}
+                    Across {registeredBankIds.length} active account
+                    {registeredBankIds.length === 1 ? "" : "s"}
                   </div>
                 </Card>
                 <Card className="space-y-1.5 border-border/70 bg-card/80 p-3.5">
@@ -416,7 +424,9 @@ export function BankingView() {
                     const bank = BANK_BY_ID[bankId];
                     if (!account) return null;
                     const brand = bankBrand(bankId);
-                    const activeLoans = (account.loans || []).filter((loan) => loan.status === "active");
+                    const activeLoans = (account.loans || []).filter(
+                      (loan) => loan.status === "active",
+                    );
                     return (
                       <Card key={bankId} className="space-y-3 border-border/80 bg-card/80 p-4">
                         <div className="flex items-center gap-3">
@@ -428,7 +438,11 @@ export function BankingView() {
                               borderColor: brand.border,
                             }}
                           >
-                            {(bank?.name ?? bankId).split(" ").map((word) => word[0]).slice(0, 2).join("")}
+                            {(bank?.name ?? bankId)
+                              .split(" ")
+                              .map((word) => word[0])
+                              .slice(0, 2)
+                              .join("")}
                           </span>
                           <div className="min-w-0">
                             <div className="truncate text-sm font-bold text-foreground">
@@ -517,7 +531,9 @@ export function BankingView() {
           )}
 
           {/* Active Portfolios Section */}
-          {isAccountOperation && activeAccountTab && registeredBankIds.includes(activeAccountTab) && (
+          {isAccountOperation &&
+            activeAccountTab &&
+            registeredBankIds.includes(activeAccountTab) && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
