@@ -15,17 +15,17 @@ import {
   corpMods,
   corpTick,
   reconcileMembership,
-  facilityCost,
   type CorpAction,
 } from "@/game/corp";
 import {
   RANK_PERMS,
-  CORP_FACILITIES,
-  CORP_DEPARTMENTS,
-  CORP_BUSINESSES,
   type Rank,
 } from "@/game/config";
 import { GameError, type CorpState, type PlayerState } from "@/game/types";
+import {
+  corporationLeaderboardEntry,
+  type CorporationLeaderboardEntry,
+} from "@/game/leaderboard";
 
 type AnyAction = Action | CorpAction;
 const CORP_TYPES = new Set([
@@ -71,38 +71,7 @@ function corpView(c: CorpState | null, uid: string) {
   };
 }
 
-function corporationLeaderboardEntry(id: string, c: CorpState): CorpLeaderboardEntry {
-  let upgradeSpend = 0;
-  for (const [facilityId, level] of Object.entries(c.facilities || {})) {
-    for (let i = 0; i < level; i++) upgradeSpend += facilityCost(facilityId, i);
-  }
-  for (const departmentId of Object.keys(c.departments || {})) {
-    const department = CORP_DEPARTMENTS.find((item) => item.id === departmentId);
-    if (department) upgradeSpend += department.cost;
-  }
-  for (const business of Object.values(c.businesses || {})) {
-    const definition = CORP_BUSINESSES.find((item) => item.id === business.defId);
-    if (definition) upgradeSpend += definition.price;
-  }
-  let totalShifts = 0;
-  let totalContributions = 0;
-  for (const member of Object.values(c.members || {})) {
-    totalShifts += member.shifts || 0;
-    totalContributions += member.total || 0;
-  }
-  return {
-    id,
-    name: c.name || "Corporation",
-    tag: c.tag || "CORP",
-    level: c.level || 1,
-    xp: c.xp || 0,
-    activity:
-      totalShifts * 10 +
-      Math.floor(totalContributions / 1000) +
-      (c.completedObjectives?.length || 0) * 50,
-    valuation: upgradeSpend + (c.treasury || 0),
-  };
-}
+
 
 /** Secret per-round casino seed: HMAC(server key, user:round). */
 async function casinoSeed(uid: string, round: number) {
@@ -518,15 +487,7 @@ export async function getLeaderboard(sort: "networth" | "experience" = "networth
   }
 }
 
-export type CorpLeaderboardEntry = {
-  id: string;
-  name: string;
-  tag: string;
-  level: number;
-  xp: number;
-  activity: number;
-  valuation: number;
-};
+export type CorpLeaderboardEntry = CorporationLeaderboardEntry;
 
 export async function getCorporationLeaderboard(
   sort: "activity" | "experience" | "valuation" = "activity",
