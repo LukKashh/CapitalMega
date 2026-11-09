@@ -61,7 +61,7 @@ export function BankingHub({ onClose }: { onClose: () => void }) {
             <p className="text-xs text-muted-foreground">Authenticating credentials · Encrypting session · Opening gateway</p>
           </div>
           <div className="h-1.5 w-52 overflow-hidden rounded-full bg-muted">
-            <div className="h-full w-full origin-left animate-[bank-connect_1.8s_ease-in-out_forwards] rounded-full bg-primary" />
+            <div className="h-full w-full origin-left animate-pulse rounded-full bg-primary" />
           </div>
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-gain">
             <ShieldCheck className="h-4 w-4" /> Secure channel initialising
@@ -120,7 +120,7 @@ export function BankingHub({ onClose }: { onClose: () => void }) {
             <Pill tone="gain">Connected</Pill>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-            <BankingWorkspace />
+            <BankingWorkspace bankFilterId={selectedBankId ?? undefined} />
           </div>
         </div>
       )}
