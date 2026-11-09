@@ -75,7 +75,9 @@ export function AppShell() {
     void checkDeveloperAccess().then((allowed) => {
       if (active) setIsDeveloper(allowed);
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function signOut() {
@@ -274,7 +276,9 @@ export function AppShell() {
                       >
                         <Code2 className="h-4 w-4 shrink-0 text-violet-300" />
                         <span>Developer Tools</span>
-                        <span className="ml-auto rounded-full bg-violet-300/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-200">Admin</span>
+                        <span className="ml-auto rounded-full bg-violet-300/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-200">
+                          Admin
+                        </span>
                       </button>
                     )}
                   </div>
