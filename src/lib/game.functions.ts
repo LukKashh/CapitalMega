@@ -9,23 +9,20 @@ import {
   limit,
   runTransaction,
 } from "firebase/firestore";
-import { apply, newPlayer, tick, gainXp, netWorth, checkAchievements, type Action, type Ctx } from "@/game/engine";
 import {
-  applyCorp,
-  corpMods,
-  corpTick,
-  reconcileMembership,
-  type CorpAction,
-} from "@/game/corp";
-import {
-  RANK_PERMS,
-  type Rank,
-} from "@/game/config";
+  apply,
+  newPlayer,
+  tick,
+  gainXp,
+  netWorth,
+  checkAchievements,
+  type Action,
+  type Ctx,
+} from "@/game/engine";
+import { applyCorp, corpMods, corpTick, reconcileMembership, type CorpAction } from "@/game/corp";
+import { RANK_PERMS, type Rank } from "@/game/config";
 import { GameError, type CorpState, type PlayerState } from "@/game/types";
-import {
-  corporationLeaderboardEntry,
-  type CorporationLeaderboardEntry,
-} from "@/game/leaderboard";
+import { corporationLeaderboardEntry, type CorporationLeaderboardEntry } from "@/game/leaderboard";
 
 type AnyAction = Action | CorpAction;
 const CORP_TYPES = new Set([
@@ -70,8 +67,6 @@ function corpView(c: CorpState | null, uid: string) {
     perms,
   };
 }
-
-
 
 /** Secret per-round casino seed: HMAC(server key, user:round). */
 async function casinoSeed(uid: string, round: number) {
@@ -475,7 +470,9 @@ export type LeaderboardEntry = {
   corpTag: string | null;
 };
 
-export async function getLeaderboard(sort: "networth" | "experience" = "networth"): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(
+  sort: "networth" | "experience" = "networth",
+): Promise<LeaderboardEntry[]> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Please sign in to continue");
   try {
@@ -508,11 +505,7 @@ export async function getCorporationLeaderboard(
   try {
     const rankingField = sort === "experience" ? "xp" : sort;
     const snaps = await getDocs(
-      query(
-        collection(db, "public_corporations"),
-        orderBy(rankingField, "desc"),
-        limit(10),
-      ),
+      query(collection(db, "public_corporations"), orderBy(rankingField, "desc"), limit(10)),
     );
     return snaps.docs
       .map((d) => d.data())
