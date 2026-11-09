@@ -929,8 +929,8 @@ export function BankingView() {
                                       </div>
                                       <p className="mt-1 text-[10px] text-muted-foreground">
                                         Route newly generated income from eligible assets directly
-                                        into this bank account. Previously accrued wallet balances can
-                                        still be collected here.
+                                        into this bank account. Previously accrued wallet balances
+                                        can still be collected here.
                                       </p>
                                     </div>
                                     {supportsBusinessIncome(bankDef) &&
