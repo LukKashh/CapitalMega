@@ -156,9 +156,9 @@ export function AppShell() {
               </SheetTitle>
             </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 space-y-4">
               {menuPanel ? (
-                <div className="space-y-4">
+                <div className="min-w-0 w-full max-w-full space-y-4">
                   <Button
                     variant="ghost"
                     size="sm"

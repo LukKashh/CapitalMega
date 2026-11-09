@@ -108,7 +108,7 @@ export function BankingView() {
       s.level >= bank.tierRequired;
 
     return (
-      <div className="space-y-4">
+      <div className="banking-view min-w-0 w-full max-w-full space-y-4">
         <Button
           variant="ghost"
           size="sm"
@@ -243,7 +243,7 @@ export function BankingView() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="banking-view min-w-0 w-full max-w-full space-y-6">
       {!activeAccountTab && (
         <div className="space-y-6">
           <div className="text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
