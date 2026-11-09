@@ -93,7 +93,7 @@ function HomePage() {
       x,
       y,
       size: Math.max(260, farthestCorner * 2.12),
-      duration: 1320,
+      duration: 2200,
     };
     setRipples((list) => [...list.slice(-11), ripple]);
     setTimeout(() => setRipples((list) => list.filter((item) => item.id !== ripple.id)), ripple.duration + 360);
@@ -266,12 +266,14 @@ function HomePage() {
 
               {/* Reward coin launches from the impact with fluid particle wake. */}
               <div className="float-small-coin home-reward-coin relative">
-                <img
-                  src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png"
-                  alt=""
-                  draggable={false}
-                  className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
-                />
+                <span className="home-reward-materialise absolute inset-0 z-[2] flex items-center justify-center">
+                  <img
+                    src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png"
+                    alt=""
+                    draggable={false}
+                    className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
+                  />
+                </span>
                 <span className="home-reward-trail" />
                 <span className="home-reward-particle home-reward-particle-a" />
                 <span className="home-reward-particle home-reward-particle-b" />
