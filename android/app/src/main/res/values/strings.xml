@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Capital Fortune</string>
+    <string name="title_activity_main">Capital Fortune</string>
+    <string name="package_name">com.capitalfortune.app</string>
+    <string name="custom_url_scheme">com.capitalfortune.app</string>
+</resources>
