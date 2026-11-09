@@ -218,11 +218,9 @@ function CollectiblesPage() {
                 />
               </div>
 
-              {/* List Header with item counts, page indicator, and view toggle */}
+              {/* Compact list header with item count and view toggle */}
               <div className="shrink-0 mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  {items.length} items · Page {currentPage} of {totalPages} (12/page)
-                </span>
+                <span>{items.length} items</span>
                 <div className="flex gap-1">
                   <Button
                     variant="ghost"
@@ -256,23 +254,28 @@ function CollectiblesPage() {
                     <Card
                       className={
                         view === "grid"
-                          ? "h-full p-2.5 hover:border-primary/50 transition-colors"
-                          : "flex items-center gap-2.5 p-2.5 hover:border-primary/50 transition-colors"
+                          ? "flex h-full items-center gap-2 p-2 hover:border-primary/50 transition-colors"
+                          : "flex items-center gap-2 p-2 hover:border-primary/50 transition-colors"
                       }
                     >
                       <CollectibleIcon
                         category={it.category}
                         rarity={it.rarity}
-                        className={
-                          view === "grid" ? "mb-1.5 aspect-square w-full" : "h-10 w-10 shrink-0"
-                        }
+                        className="h-9 w-9 shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-semibold">{it.name}</div>
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <div className="truncate text-xs font-semibold">{it.name}</div>
+                          {owned.has(it.id) && (
+                            <Pill tone="gain" className="shrink-0 px-1.5 py-0 text-[9px]">
+                              Owned
+                            </Pill>
+                          )}
+                        </div>
                         <div className="truncate text-[10px] text-muted-foreground">
                           {it.rarity} · {CATEGORIES.find((c) => c.id === it.category)?.name}
                         </div>
-                        <div className="mt-1 flex items-center justify-between">
+                        <div className="mt-0.5 flex items-center justify-between gap-2">
                           <span className="num text-xs font-semibold">{money(it.price)}</span>
                           <span
                             className={`num text-[10px] ${ch >= 0 ? "text-gain" : "text-loss"}`}
@@ -280,23 +283,15 @@ function CollectiblesPage() {
                             {pct(ch, 1, true)}
                           </span>
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {owned.has(it.id) && (
-                            <Pill tone="gain">
-                              <Check className="mr-0.5 h-2.5 w-2.5" />
-                              Owned
-                            </Pill>
-                          )}
-                          {it.limited && (
-                            <Pill tone="gold">
-                              {!released
-                                ? `In ${duration(it.releaseAt! - now)}`
-                                : left > 0
-                                  ? `${left}/${it.limited} left`
-                                  : "Sold out"}
-                            </Pill>
-                          )}
-                        </div>
+                        {it.limited && (
+                          <div className="mt-0.5 text-[9px] text-amber-400">
+                            {!released
+                              ? `Releases in ${duration(it.releaseAt! - now)}`
+                              : left > 0
+                                ? `${left} of ${it.limited} remaining`
+                                : "Sold out"}
+                          </div>
+                        )}
                       </div>
                     </Card>
                   </Link>
