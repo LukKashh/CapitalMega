@@ -22,10 +22,20 @@ This roadmap turns the architecture recommendations into reviewable work. Each p
 
 **Priority: Critical**
 
+**Entry gate — confirm the production server runtime before implementation**
+
+The current game hooks call ordinary functions from `src/lib/game.functions.ts` directly; they are not invoking TanStack server functions. The existing global function middleware therefore does not protect game actions. In addition, the repository currently sets `nitro: false`, contains no Firebase Admin/Functions dependency, and has no checked-in production deployment/secret-provisioning configuration.
+
+Before coding the privileged adapter:
+- Confirm where the production application is hosted and whether requests execute in a Node.js server, an edge runtime, or static hosting.
+- Confirm how that host deploys server endpoints and provisions server-only secrets.
+- Select the matching trusted backend runtime. Do not assume Firebase Admin SDK is compatible with an edge target, or that a static build can enforce server-side authorization.
+- Keep the backend choice aligned with the existing Firebase Authentication and Firestore data unless a separate provider decision is approved.
+
 **Deliverables**
-- Establish a trusted server-side Firebase identity verification path using Firebase Admin SDK or an equivalent verified-token mechanism.
+- Replace the direct client-executed game command path with actual trusted server endpoints (TanStack server functions only if the selected deployment executes them; otherwise use the selected backend's HTTPS API).
+- Establish server-side Firebase ID-token verification using Firebase Admin SDK or an equivalent mechanism appropriate to the confirmed runtime.
 - Replace any authorization decision based on decoded-but-unverified token payloads.
-- Move sensitive game actions and state transitions behind trusted server command handlers.
 - Keep domain calculations in provider-independent `src/game/` modules.
 - Tighten Firestore rules so clients cannot create ledger entries or mutate global stock counters directly.
 - Restrict private player-state and ledger reads to their owner or explicit trusted workflows.
@@ -42,7 +52,7 @@ This roadmap turns the architecture recommendations into reviewable work. Each p
 - No secrets are shipped to the browser bundle.
 - Security-rule tests cover owner, non-owner, anonymous, and administrator cases.
 
-**Migration note:** this phase changes the trust boundary. Preserve current player-save shape and action semantics. Use compatibility wrappers only as a temporary migration aid; do not leave both client and server paths able to commit the same action.
+**Migration note:** this phase changes the trust boundary. Preserve current player-save shape and action semantics. Map every current direct Firestore read/write and its UI consumer before changing rules. Migrate game actions and dependent reads behind the selected trusted boundary first; keep public leaderboard/profile data in an explicit limited projection. Tighten client rules only after the corresponding server path and read model are deployed and tested. Use compatibility wrappers only as a temporary migration aid; do not leave both client and server paths able to commit the same action.
 
 ## Phase 2 — Unified financial transaction service
 
