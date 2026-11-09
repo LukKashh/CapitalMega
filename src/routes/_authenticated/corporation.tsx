@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Users } from "lucide-react";
@@ -56,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/corporation")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: CorpPage,
+  component: () => <div className="p-4"><h1 className="text-lg font-semibold">Corporations are temporarily offline</h1><p className="mt-2 text-sm text-muted-foreground">The independent edition is currently focused on personal empire progression. Corporation multiplayer will be enabled after its server-authoritative migration is complete.</p><Link className="mt-4 inline-block text-primary underline" to="/home">Return to your empire</Link></div>,
 });
 
 function CorpPage() {
