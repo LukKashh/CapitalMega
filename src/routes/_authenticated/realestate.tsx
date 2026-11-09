@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Home, Lock } from "lucide-react";
 import { useAct, useGame, useNow } from "@/hooks/use-game";
 import { PROPERTIES } from "@/game/config";
@@ -44,8 +44,8 @@ function RealEstatePage() {
   const { run, pending } = useAct();
   const [tab, setTab] = useState<"owned" | "market">("owned");
   const [cat, setCat] = useState("All");
-  const p = data ? personalMods(data.state) : null;
-  const cm = data ? corpMods(data.corp) : null;
+  const p = useMemo(() => (data ? personalMods(data.state) : null), [data]);
+  const cm = useMemo(() => (data ? corpMods(data.corp) : null), [data]);
   if (!data || !p || !cm) return <Loading />;
   const s = data.state;
   const owned = Object.values(s.properties);
