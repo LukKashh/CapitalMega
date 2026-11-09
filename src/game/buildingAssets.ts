@@ -1,7 +1,7 @@
 /**
- * CAPITAL FORTUNE — ONLINE BUILDING ASSET CATALOGUE
+ * CAPITAL FORTUNE — LOCAL BUILDING ASSET CATALOGUE
  *
- * Centralized registry for all ImgBB-hosted building assets.
+ * Centralized registry for all Bundled building assets.
  * Stores asset definitions, categories, direct URLs, and game mapping rules.
  * Expandable to accommodate future building artwork.
  */
@@ -29,7 +29,7 @@ export interface BuildingAssetDef {
 }
 
 /**
- * The 15 registered building assets with direct ImgBB URLs.
+ * The 15 registered building assets with local application asset paths.
  * BLD-001 through BLD-010: Business
  * BLD-011 through BLD-015: Real Estate
  * Note: Office Building exists twice intentionally (BLD-005 Business, BLD-013 Real Estate)
@@ -40,7 +40,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-001",
     name: "Lemonade Stand",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/Wv8Vh6Sf/01-lemonade-stand.png",
+    sourceUrl: "/assets/game/catalogue/bld-001.png",
     localFallback: "/assets/game/catalogue/bld-001.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 282 },
@@ -51,7 +51,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-002",
     name: "Cafe",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/xt3LsrSx/02-cafe.png",
+    sourceUrl: "/assets/game/catalogue/bld-002.png",
     localFallback: "/assets/game/catalogue/bld-002.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 277 },
@@ -62,7 +62,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-003",
     name: "Retail Shop",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/NdMDxwLQ/03-retail-shop.png",
+    sourceUrl: "/assets/game/catalogue/bld-003.png",
     localFallback: "/assets/game/catalogue/bld-003.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 271 },
@@ -73,7 +73,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-004",
     name: "Supermarket",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/MKtjndc/04-supermarket.png",
+    sourceUrl: "/assets/game/catalogue/bld-004.png",
     localFallback: "/assets/game/catalogue/bld-004.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 266 },
@@ -84,7 +84,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-005",
     name: "Office Building",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/DHWw0qsz/05-office-building.png",
+    sourceUrl: "/assets/game/catalogue/bld-005.png",
     localFallback: "/assets/game/catalogue/bld-005.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 258 },
@@ -95,7 +95,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-006",
     name: "Factory",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/JFbzsHcr/06-factory.png",
+    sourceUrl: "/assets/game/catalogue/bld-006.png",
     localFallback: "/assets/game/catalogue/bld-006.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 253 },
@@ -106,7 +106,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-007",
     name: "Warehouse",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/d0bBs5VY/07-warehouse.png",
+    sourceUrl: "/assets/game/catalogue/bld-007.png",
     localFallback: "/assets/game/catalogue/bld-007.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 256 },
@@ -117,7 +117,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-008",
     name: "Refinery",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/MkMr9VMd/08-refinery.png",
+    sourceUrl: "/assets/game/catalogue/bld-008.png",
     localFallback: "/assets/game/catalogue/bld-008.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 251 },
@@ -128,7 +128,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-009",
     name: "Mine",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/RkQ1JG5R/09-mine.png",
+    sourceUrl: "/assets/game/catalogue/bld-009.png",
     localFallback: "/assets/game/catalogue/bld-009.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 280 },
@@ -139,7 +139,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-010",
     name: "Farm",
     category: "Business",
-    sourceUrl: "https://i.ibb.co/Hf2C0Qgs/10-farm.png",
+    sourceUrl: "/assets/game/catalogue/bld-010.png",
     localFallback: "/assets/game/catalogue/bld-010.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 275 },
@@ -152,7 +152,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-011",
     name: "Residential",
     category: "Real Estate",
-    sourceUrl: "https://i.ibb.co/zT3qrFNY/11-residential.png",
+    sourceUrl: "/assets/game/catalogue/bld-011.png",
     localFallback: "/assets/game/catalogue/bld-011.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 467, height: 476 },
@@ -163,7 +163,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-012",
     name: "Apartment",
     category: "Real Estate",
-    sourceUrl: "https://i.ibb.co/yBsYLt8P/12-apartment.png",
+    sourceUrl: "/assets/game/catalogue/bld-012.png",
     localFallback: "/assets/game/catalogue/bld-012.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 465, height: 476 },
@@ -174,7 +174,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-013",
     name: "Office Building",
     category: "Real Estate",
-    sourceUrl: "https://i.ibb.co/ffNHSBQ/13-office-building.png",
+    sourceUrl: "/assets/game/catalogue/bld-013.png",
     localFallback: "/assets/game/catalogue/bld-013.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 468, height: 476 },
@@ -185,7 +185,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-014",
     name: "Shopping Mall",
     category: "Real Estate",
-    sourceUrl: "https://i.ibb.co/qGbW7Jb/14-shopping-mall.png",
+    sourceUrl: "/assets/game/catalogue/bld-014.png",
     localFallback: "/assets/game/catalogue/bld-014.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 437 },
@@ -196,7 +196,7 @@ export const BUILDING_ASSET_CATALOGUE: readonly BuildingAssetDef[] = [
     id: "BLD-015",
     name: "Hotel",
     category: "Real Estate",
-    sourceUrl: "https://i.ibb.co/RTrHhWYT/15-hotel.png",
+    sourceUrl: "/assets/game/catalogue/bld-015.png",
     localFallback: "/assets/game/catalogue/bld-015.png",
     originalDimensions: { width: 512, height: 512 },
     trimmedDimensions: { width: 476, height: 434 },

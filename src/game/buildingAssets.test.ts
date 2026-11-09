@@ -42,11 +42,11 @@ describe("Building Asset Catalogue", () => {
 
     expect(bizOffice.name).toBe("Office Building");
     expect(bizOffice.category).toBe("Business");
-    expect(bizOffice.sourceUrl).toBe("https://i.ibb.co/DHWw0qsz/05-office-building.png");
+    expect(bizOffice.sourceUrl).toBe("/assets/game/catalogue/bld-005.png");
 
     expect(realOffice.name).toBe("Office Building");
     expect(realOffice.category).toBe("Real Estate");
-    expect(realOffice.sourceUrl).toBe("https://i.ibb.co/ffNHSBQ/13-office-building.png");
+    expect(realOffice.sourceUrl).toBe("/assets/game/catalogue/bld-013.png");
 
     expect(bizOffice.id).not.toBe(realOffice.id);
     expect(bizOffice.sourceUrl).not.toBe(realOffice.sourceUrl);
