@@ -21,6 +21,7 @@ import {
   Trophy,
   Landmark,
   Receipt,
+  Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
@@ -39,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loading } from "./ui";
 import { OfflineReportDialog } from "./OfflineReport";
+import { checkDeveloperAccess, DeveloperToolsDialog } from "./DeveloperTools";
 
 const NAV = [
   { to: "/realestate", label: "Assets", icon: Gem, also: ["/collectibles"] },
@@ -64,8 +66,20 @@ export function AppShell() {
   const [menu, setMenu] = useState(false);
   const [menuPanel, setMenuPanel] = useState<"tax" | null>(null);
   const [bankingOpen, setBankingOpen] = useState(false);
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [developerToolsOpen, setDeveloperToolsOpen] = useState(false);
   const qc = useQueryClient();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let active = true;
+    void checkDeveloperAccess().then((allowed) => {
+      if (active) setIsDeveloper(allowed);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function signOut() {
     await qc.cancelQueries();
@@ -251,6 +265,22 @@ export function AppShell() {
                         <span>{item.label}</span>
                       </Link>
                     ))}
+                    {isDeveloper && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenu(false);
+                          setDeveloperToolsOpen(true);
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 py-2.5 text-left text-sm font-medium text-violet-100 transition-colors hover:border-violet-300/40 hover:bg-violet-500/15"
+                      >
+                        <Code2 className="h-4 w-4 shrink-0 text-violet-300" />
+                        <span>Developer Tools</span>
+                        <span className="ml-auto rounded-full bg-violet-300/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-200">
+                          Admin
+                        </span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-1 pt-2 border-t border-border">
@@ -292,6 +322,10 @@ export function AppShell() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {isDeveloper && (
+          <DeveloperToolsDialog open={developerToolsOpen} onOpenChange={setDeveloperToolsOpen} />
+        )}
 
         {!s.username && <UsernameDialog />}
         {s.username && s.lastOffline && <OfflineReportDialog report={s.lastOffline} />}
