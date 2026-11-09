@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { auth, getCurrentUser } from "@/lib/local-auth";
-import { db, collection, doc, getDoc, getDocs, runTransaction, setDoc } from "@/lib/local-firestore";
+import { db, collection, doc, getDocs, runTransaction } from "@/lib/local-firestore";
 import {
   Dialog,
   DialogContent,

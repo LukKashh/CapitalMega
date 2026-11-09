@@ -115,9 +115,9 @@ function Landing() {
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 backdrop-blur-xl">
             <Users className="h-5 w-5 text-fuchsia-300" />
-            <p className="mt-3 text-sm font-semibold">Connect and collaborate</p>
+            <p className="mt-3 text-sm font-semibold">Build your corporation</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Build alongside others through corporations.
+              Develop a local corporation as part of your empire.
             </p>
           </div>
         </div>
