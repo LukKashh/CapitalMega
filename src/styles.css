@@ -759,3 +759,92 @@ body {
     padding-top: 0.25rem;
   }
 }
+
+
+/* Banking drawer: constrain every layout to the available sheet width on phones. */
+.banking-view {
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.banking-view,
+.banking-view * {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.banking-view :where(p, span, h3, h4, label, button) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .banking-view {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .banking-view .grid {
+    min-width: 0;
+  }
+
+  .banking-view .flex.items-center.justify-between {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .banking-view .grid.grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .banking-view .num {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .banking-view input,
+  .banking-view select {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .banking-view .flex.gap-2:has(input) {
+    flex-wrap: wrap;
+  }
+
+  .banking-view .flex.gap-2:has(input) input {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .banking-view .flex.gap-2:has(input) button {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+
+  .banking-view .grid.grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .banking-view .grid.grid-cols-5 button {
+    min-width: 0;
+    padding-inline: 0.125rem;
+    font-size: clamp(0.48rem, 2.1vw, 0.58rem);
+    letter-spacing: 0;
+    overflow-wrap: normal;
+  }
+
+  .banking-view .rounded-lg.border.bg-muted\/40 {
+    padding-inline: 0.375rem;
+  }
+
+  .banking-view .pt-2.border-t.flex.justify-between {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .banking-view .pt-2.border-t.flex.justify-between button {
+    width: 100%;
+  }
+}
