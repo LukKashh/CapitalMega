@@ -173,6 +173,7 @@ export type PlayerState = {
   };
   seq: number;
   casino?: CasinoState;
+  casinoLoyalty?: import("./casino-loyalty").CasinoLoyaltyState;
 };
 
 export type LedgerEntry = {
