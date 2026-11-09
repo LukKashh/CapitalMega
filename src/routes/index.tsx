@@ -1,5 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   Building2,
@@ -11,7 +10,6 @@ import {
 } from "lucide-react";
 import { art } from "@/components/game/art";
 import { Button } from "@/components/ui/button";
-import { auth, onAuthStateChanged } from "@/lib/firebase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,7 +24,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "A mobile-first wealth and business tycoon game with cloud saves and cooperative corporations.",
+          "A mobile-first wealth and business tycoon game with local saves and local corporation simulation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -36,14 +34,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    if (auth.currentUser) navigate({ to: "/home", replace: true });
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) navigate({ to: "/home", replace: true });
-    });
-    return () => unsubscribe();
-  }, [navigate]);
 
   return (
     <main className="entry-screen relative flex min-h-[100svh] flex-col overflow-hidden text-white">
@@ -66,7 +56,7 @@ function Landing() {
           search={{ mode: "signin" }}
           className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-medium text-slate-200 backdrop-blur transition hover:bg-white/10"
         >
-          Sign in
+          Continue
         </Link>
       </header>
 
@@ -92,7 +82,7 @@ function Landing() {
               className="h-12 flex-1 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-500 font-semibold shadow-lg shadow-violet-950/40 hover:brightness-110"
             >
               <Link to="/auth" search={{ mode: "signup" }}>
-                Create your account <ArrowRight className="h-4 w-4" />
+                Start locally <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button
@@ -132,7 +122,7 @@ function Landing() {
           </div>
         </div>
         <div className="mt-7 flex items-center gap-2 text-[11px] text-slate-400">
-          <ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure sign-in · Cloud-saved
+          <ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure sign-in · On-device
           progression
         </div>
       </div>
