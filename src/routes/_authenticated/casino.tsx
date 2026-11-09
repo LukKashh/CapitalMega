@@ -21,10 +21,10 @@ function CasinoPage() {
   const [selectedGame, setSelectedGame] = useState<"Roulette" | "Blackjack" | "Mines" | "Keno" | "Hi-Lo">("Roulette");
   const navigate = useNavigate();
   if (!data) return <Loading />;
-  if (tableOpen) return <div className="casino-table-shell pb-4">
-    <div className="mb-3 flex items-center justify-between border-b border-violet-400/20 pb-2">
-      <button onClick={() => setTableOpen(false)} className="text-xs font-bold text-primary">← Casino lobby</button>
-      <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Virtual chips only</span>
+  if (tableOpen) return <div className="casino-table-shell cf-casino-live-route pb-4">
+    <div className="cf-game-route-bar mb-3 flex items-center justify-between border-b border-violet-400/20 pb-2">
+      <button onClick={() => setTableOpen(false)} className="text-xs font-bold text-primary">‹ CASINO FLOOR</button>
+      <span className="text-[9px] uppercase tracking-widest text-muted-foreground">VIRTUAL CHIPS · PORTRAIT TABLE</span>
     </div>
     <CasinoTable initialGame={selectedGame} />
   </div>;
