@@ -596,3 +596,166 @@
 .entry-backdrop {
   object-position: center;
 }
+
+
+/* Mobile portrait layout: use the physical viewport, reserve the bottom navigation,
+   and size high-priority controls against the available screen width. */
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.game-shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: hidden;
+}
+
+.game-content {
+  min-height: 0;
+  padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.game-nav.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.375rem);
+}
+
+.game-page-header {
+  width: 100%;
+}
+
+.game-page-title {
+  min-width: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.game-page-subtitle {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .game-shell {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .game-content {
+    padding-top: 0.375rem;
+    padding-right: clamp(0.625rem, 3vw, 0.875rem);
+    padding-left: clamp(0.625rem, 3vw, 0.875rem);
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .game-nav-inner {
+    min-height: 3.125rem;
+    padding-right: max(0.375rem, env(safe-area-inset-right, 0px));
+    padding-left: max(0.375rem, env(safe-area-inset-left, 0px));
+  }
+
+  .game-nav-link {
+    min-width: 0;
+    min-height: 2.875rem;
+    margin: 0.125rem 0.0625rem;
+    padding: 0.375rem 0.0625rem;
+    gap: 0.125rem;
+    font-size: 0.625rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .game-nav-link .game-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .game-nav-center {
+    min-height: 2.875rem;
+  }
+
+  .game-nav-center-badge {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-top: -0.625rem;
+  }
+
+  .game-page-header {
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .game-page-title {
+    font-size: clamp(1.125rem, 4.8vw, 1.375rem);
+  }
+
+  .game-page-subtitle {
+    font-size: clamp(0.6875rem, 2.8vw, 0.8125rem);
+  }
+
+  .home-profile-card {
+    width: clamp(9rem, 52vw, 12.2rem);
+    max-width: 55vw;
+    padding: 0.375rem 0.5rem;
+    gap: 0.375rem;
+  }
+
+  .home-profile-card > div:first-child > div {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .home-brand {
+    font-size: clamp(0.6875rem, 3.6vw, 1rem);
+    letter-spacing: 0;
+    line-height: 1.1;
+  }
+
+  .home-clicker-frame {
+    min-height: clamp(12rem, 42svh, 20rem);
+  }
+
+  .home-clicker-footer {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.6875rem;
+  }
+}
+
+@media (max-width: 380px) and (orientation: portrait) {
+  .home-clicker-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.375rem;
+  }
+
+  .home-clicker-footer > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .home-profile-card {
+    width: min(52vw, 10.5rem);
+  }
+
+  .home-profile-card .num {
+    font-size: 0.625rem;
+  }
+}
+
+@media (max-height: 640px) and (orientation: portrait) {
+  .home-clicker-frame {
+    min-height: 11rem;
+  }
+
+  .game-content {
+    padding-top: 0.25rem;
+  }
+}
