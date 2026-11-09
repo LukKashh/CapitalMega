@@ -96,7 +96,7 @@ function HomePage() {
       duration: 1320,
     };
     setRipples((list) => [...list.slice(-11), ripple]);
-    setTimeout(() => setRipples((list) => list.filter((item) => item.id !== ripple.id)), ripple.duration + 100);
+    setTimeout(() => setRipples((list) => list.filter((item) => item.id !== ripple.id)), ripple.duration + 360);
   };
 
   const handleFramePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
