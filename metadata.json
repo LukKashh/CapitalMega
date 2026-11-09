@@ -1,6 +1,6 @@
 {
-  "name": "Remix Remix Capitalfortune",
-  "description": "Create and Manage your own Capitalist Empire. Earn, build, upgrade and invest all to reach the Top.",
+  "name": "Capital Fortune",
+  "description": "A wealth and business tycoon game about building and managing an expanding empire.",
   "version": "1.0.0",
   "permissions": [],
   "capabilities": [
