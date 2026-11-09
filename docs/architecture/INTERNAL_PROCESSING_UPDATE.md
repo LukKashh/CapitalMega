@@ -8,7 +8,7 @@
 
 ### Firestore transaction ordering
 
-All transaction reads are now performed before the first queued write. The collectible stock documents are pre-read and validated before player, corporation, ledger, or stock documents are written. This removes the previous transaction read-after-write failure path.
+All transaction reads are now performed before the first queued write. The collectible stock and corporation documents are pre-read and validated before player, corporation, ledger, or stock documents are written. Both player and corporation versions are checked inside the transaction to reject stale concurrent updates. This removes the previous transaction read-after-write failure path and prevents stale corporation snapshots from overwriting newer member updates.
 
 ### Honest commit results
 
@@ -38,11 +38,12 @@ Existing players and corporations are indexed lazily: their projection is create
 - Pending corporation membership lookups are issued concurrently while preserving the original pending-list priority.
 - Achievement evaluation is orchestrated once after the combined tick/action cycle rather than once in `tick` and again in `apply`.
 - Real-estate property economics are calculated once per property render cycle and reused for aggregate and row-level wallet displays.
+- Player stock/crypto definition maps and current market ticks are captured once per net-worth calculation, not fetched/re-resolved for every holding.
 
 ## 3. Rendering and architecture
 
 - Live wallet display refresh is reduced from 250 ms to 1,000 ms. The underlying server-side simulation and financial formulas are unchanged.
-- Home-screen modifiers/click value and Empire-screen modifiers are memoized against their source game state.
+- Home-screen modifiers/click value, Empire-screen modifiers, and Real Estate screen modifiers are memoized against their source game data.
 - Corporation leaderboard aggregation now lives in the provider-independent `src/game/leaderboard.ts` domain module, with tests covering its valuation and activity calculations.
 - Public ranking DTOs are deliberately smaller and no longer include unrelated balance/profile fields.
 
