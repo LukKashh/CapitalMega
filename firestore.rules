@@ -125,9 +125,6 @@ service cloud.firestore {
         && request.resource.data.username == player.username
         && request.resource.data.level == player.level
         && request.resource.data.netWorth == player.netWorth
-        && request.resource.data.liquid == player.liquid
-        && request.resource.data.title == player.title
-        && request.resource.data.avatar == player.avatar
         && request.resource.data.corpTag == player.corpTag
         && request.resource.data.corpId == player.state.corp.id
         && request.resource.data.updatedAt == player.updatedAt;
