@@ -59,13 +59,13 @@ function HomePage() {
   const createPop = (x: number, y: number): PopItem => {
     const id = ++popId.current;
     // Randomized wavy pattern & randomized upward flow direction
-    const dx = (Math.random() - 0.5) * 50; // -25px to +25px gentle lateral drift
-    const dy = -70 - Math.random() * 45; // -70px to -115px smooth upward float
-    const wave = (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 20); // fluid S-curve wave swing
-    const rotStart = (Math.random() - 0.5) * 20; // gentle initial rotation
-    const rotEnd = (Math.random() - 0.5) * 45; // gentle final rotation
-    const scale = 0.9 + Math.random() * 0.22; // coin scale
-    const duration = 1350 + Math.floor(Math.random() * 250); // 1350ms - 1600ms smooth fluid slow pace
+    const dx = (Math.random() - 0.5) * 38; // restrained lateral drift
+    const dy = -58 - Math.random() * 34; // short, crisp upward movement
+    const wave = (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 12); // subtle motion variation
+    const rotStart = (Math.random() - 0.5) * 12; // subtle initial rotation
+    const rotEnd = (Math.random() - 0.5) * 28; // restrained final rotation
+    const scale = 0.88 + Math.random() * 0.18; // coin scale
+    const duration = 880 + Math.floor(Math.random() * 220); // 880ms - 1100ms responsive feedback
     return { id, x, y, dx, dy, wave, rotStart, rotEnd, scale, duration };
   };
 
@@ -164,7 +164,7 @@ function HomePage() {
       </div>
 
       {/* Unified Clicker UI Container (Clickable Area + Bottom Status merged inside) */}
-      <div className="home-clicker-frame relative my-1 w-full flex-1 min-h-[260px] rounded-2xl border border-primary/35 bg-gradient-to-b from-card/70 via-surface/40 to-muted/60 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(167,139,250,0.25)] flex flex-col justify-between overflow-hidden">
+      <div className="home-clicker-frame relative my-1 w-full flex-1 min-h-[260px] rounded-[1.65rem] border border-primary/30 bg-[#0b0b15] shadow-[0_18px_48px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between overflow-hidden">
         {/* Interactive Clickable Area (Middle Prompt & Emoji removed) */}
         <div
           onPointerDown={handleFramePointerDown}
@@ -172,7 +172,7 @@ function HomePage() {
           tabIndex={0}
           role="button"
           aria-label="Tap anywhere within frame to generate wealth"
-          className="relative flex-1 w-full select-none cursor-pointer overflow-hidden touch-manipulation focus:outline-none focus:ring-1 focus:ring-primary/60 active:border-primary-glow transition-all flex items-center justify-center group"
+          className="home-tap-surface relative flex-1 w-full select-none cursor-pointer overflow-hidden touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-glow flex items-center justify-center group"
         >
           {/* Cyberpunk Frames Window Corner Accents */}
           <div className="pointer-events-none absolute inset-2 rounded-xl border border-primary/15" />
@@ -185,11 +185,23 @@ function HomePage() {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.14),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(139,92,246,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(139,92,246,0.04)_1px,transparent_1px)] bg-[size:28px_28px]" />
 
-          {/* Upward Floating Small Coin animation till bursting and disappearing */}
+          <div className="home-tap-center pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3">
+            <div className="home-tap-orbit absolute rounded-full" />
+            <div className="home-tap-medallion relative flex items-center justify-center">
+              <div className="home-tap-medallion-glint absolute inset-0 rounded-full" />
+              <img src="/assets/aistudio/file_000000001f808246b3f630ace71f936f_d89c4e38.png" alt="" draggable={false} className="home-tap-coin relative z-[1] h-full w-full select-none object-contain" />
+            </div>
+            <div className="relative z-[2] flex flex-col items-center gap-1.5">
+              <span className="home-tap-label text-[11px] sm:text-xs font-extrabold tracking-[0.24em] text-foreground/90">TAP TO EARN</span>
+              <span className="home-tap-caption text-[9px] sm:text-[10px] font-semibold tracking-[0.16em] text-muted-foreground/80">ANYWHERE ON THIS PANEL</span>
+            </div>
+          </div>
+
+          {/* Upward floating reward feedback */}
           {pops.map((pp) => (
             <div
               key={pp.id}
-              className="pointer-events-none absolute z-30"
+              className="home-tap-reward pointer-events-none absolute z-30"
               style={
                 {
                   left: pp.x,
@@ -229,7 +241,7 @@ function HomePage() {
         </div>
 
         {/* Merged Bottom Section within Clicker UI Container */}
-        <div className="home-clicker-footer shrink-0 w-full border-t border-primary/20 bg-card/85 px-3 py-2 text-left backdrop-blur-md flex items-center justify-between gap-2 z-10">
+        <div className="home-clicker-footer shrink-0 w-full border-t border-white/[0.07] bg-[#10101b]/95 px-3 py-2.5 text-left backdrop-blur-xl flex items-center justify-between gap-2 z-10">
           {/* Cash-Tap Liquidity */}
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-xs font-semibold text-foreground tracking-wide truncate">
