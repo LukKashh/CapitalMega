@@ -6,6 +6,7 @@ import { useGame } from "@/hooks/use-game";
 import { CASINO } from "@/game/config";
 import { money } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { casinoLoyaltyProgress, CASINO_LOYALTY_TIERS } from "@/game/casino-loyalty";
 
 type Section = "connecting" | "home" | "games" | "wallet" | "loyalty" | "activity";
 const GAME_CARDS = [
@@ -16,7 +17,7 @@ const GAME_CARDS = [
   { id: "Hi-Lo", icon: "🃏", tag: "CARD", note: "Predict the next card", tone: "from-emerald-500/30 to-teal-500/10" },
 ] as const;
 
-export function CasinoHub({ onClose, onPlay }: { onClose: () => void; onPlay: () => void }) {
+export function CasinoHub({ onClose, onPlay }: { onClose: () => void; onPlay: (game: (typeof GAME_CARDS)[number]["id"]) => void }) {
   const { data } = useGame();
   const [section, setSection] = useState<Section>("connecting");
   const [entering, setEntering] = useState(false);
@@ -29,12 +30,13 @@ export function CasinoHub({ onClose, onPlay }: { onClose: () => void; onPlay: ()
   const chips = casino?.chips ?? 0;
   const cash = state?.cash ?? 0;
   const loyaltyXp = Math.max(0, casino?.stats.wagered ?? 0);
-  const tier = loyaltyXp >= 50000 ? "Diamond" : loyaltyXp >= 15000 ? "Platinum" : loyaltyXp >= 5000 ? "Gold" : loyaltyXp >= 1000 ? "Silver" : "Bronze";
-  const progress = loyaltyXp >= 50000 ? 100 : tier === "Platinum" ? (loyaltyXp - 15000) / 350 : tier === "Gold" ? (loyaltyXp - 5000) / 100 : tier === "Silver" ? (loyaltyXp - 1000) / 80 : loyaltyXp / 20;
+  const loyalty = casinoLoyaltyProgress(loyaltyXp);
+  const tier = loyalty.tier.name;
+  const progress = loyalty.progress * 100;
   const activity = useMemo(() => casino?.last ? [casino.last] : [], [casino?.last]);
-  const openGame = () => {
+  const openGame = (game: (typeof GAME_CARDS)[number]["id"]) => {
     setEntering(true);
-    window.setTimeout(() => onPlay(), 520);
+    window.setTimeout(() => onPlay(game), 520);
   };
   return (
     <section className="casino-hub fixed inset-0 z-[82] flex min-h-0 flex-col overflow-hidden bg-[#090812] text-white"
@@ -81,9 +83,9 @@ export function CasinoHub({ onClose, onPlay }: { onClose: () => void; onPlay: ()
 
                 <div className="flex items-center justify-between"><div><div className="text-sm font-black">Featured tables</div><div className="text-[10px] text-white/45">Pick up where you left off</div></div><button onClick={() => setSection("games")} className="text-xs font-bold text-violet-300">View all →</button></div>
                 <div className="grid grid-cols-2 gap-2">
-                  {GAME_CARDS.slice(0,4).map((g) => <button key={g.id} onClick={openGame} className={cn("casino-game-card min-h-[118px] rounded-xl border border-violet-300/15 bg-gradient-to-br p-3 text-left transition-all active:scale-[.98]",g.tone)}><div className="flex items-start justify-between"><span className="text-3xl">{g.icon}</span><span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[8px] tracking-widest text-white/60">{g.tag}</span></div><div className="mt-2 text-sm font-black">{g.id}</div><div className="text-[10px] text-white/55">{g.note}</div></button>)}
+                  {GAME_CARDS.slice(0,4).map((g) => <button key={g.id} onClick={() => openGame(g.id)} className={cn("casino-game-card min-h-[118px] rounded-xl border border-violet-300/15 bg-gradient-to-br p-3 text-left transition-all active:scale-[.98]",g.tone)}><div className="flex items-start justify-between"><span className="text-3xl">{g.icon}</span><span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[8px] tracking-widest text-white/60">{g.tag}</span></div><div className="mt-2 text-sm font-black">{g.id}</div><div className="text-[10px] text-white/55">{g.note}</div></button>)}
                 </div>
-                <div className="rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-3"><div className="flex items-center gap-2 text-xs font-bold text-amber-200"><Gift className="h-4 w-4" /> Daily casino reward</div><p className="mt-1 text-[10px] text-white/55">Your loyalty progress grows as you play. Rewards are virtual in-game benefits only.</p><button onClick={() => setSection("loyalty")} className="mt-2 text-[11px] font-bold text-amber-200">View loyalty program →</button></div>
+                <div className="rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-3"><div className="flex items-center gap-2 text-xs font-bold text-amber-200"><Gift className="h-4 w-4" /> Loyalty club</div><p className="mt-1 text-[10px] text-white/55">Build status through virtual-chip play and unlock cosmetic club perks.</p><button onClick={() => setSection("loyalty")} className="mt-2 text-[11px] font-bold text-amber-200">View loyalty program →</button></div>
               </div>
             ) : section === "games" ? (
               <div className="space-y-3 px-4 py-4">
@@ -95,20 +97,20 @@ export function CasinoHub({ onClose, onPlay }: { onClose: () => void; onPlay: ()
               <div className="space-y-4 px-4 py-4">
                 <Subhead title="Player wallet" subtitle="Virtual cash and casino chip exchange" back={() => setSection("home")} />
                 <div className="grid grid-cols-2 gap-2"><WalletMetric label="Available cash" value={money(cash)} tone="text-emerald-300" /><WalletMetric label="Casino chips" value={chips.toLocaleString()} tone="text-amber-300" /></div>
-                <Card className="space-y-3 border-violet-300/20 bg-[#171325] p-4"><div className="flex items-center gap-2 text-sm font-black"><Coins className="h-4 w-4 text-amber-300" /> Chip exchange</div><p className="text-xs leading-relaxed text-white/55">Open the casino tables to buy chips with in-game cash or cash chips back into your in-game balance. Rate: 1 chip = {money(CASINO.chipValue)}.</p><Button className="w-full bg-violet-600" onClick={openGame}>Open chip cashier <ArrowRight className="ml-2 h-4 w-4" /></Button></Card>
+                <Card className="space-y-3 border-violet-300/20 bg-[#171325] p-4"><div className="flex items-center gap-2 text-sm font-black"><Coins className="h-4 w-4 text-amber-300" /> Chip exchange</div><p className="text-xs leading-relaxed text-white/55">Open the casino tables to buy chips with in-game cash or cash chips back into your in-game balance. Rate: 1 chip = {money(CASINO.chipValue)}.</p><Button className="w-full bg-violet-600" onClick={() => openGame("Roulette")}>Open chip cashier <ArrowRight className="ml-2 h-4 w-4" /></Button></Card>
                 <div className="rounded-xl border border-white/10 p-3 text-[10px] text-white/45">This wallet is a game mechanic. It does not connect to payment methods, bank cards, cryptocurrency, or real-money withdrawals.</div>
               </div>
             ) : section === "loyalty" ? (
               <div className="space-y-4 px-4 py-4">
                 <Subhead title="Royal loyalty club" subtitle="Progress, status and in-game rewards" back={() => setSection("home")} />
-                <div className="rounded-2xl border border-amber-300/25 bg-gradient-to-br from-[#46331d] via-[#241a22] to-[#171325] p-4"><div className="flex items-center justify-between"><Pill tone="gold">CURRENT TIER</Pill><Crown className="h-7 w-7 text-amber-200" /></div><div className="mt-3 text-2xl font-black text-amber-100">{tier} Member</div><div className="mt-1 text-xs text-white/55">{Math.floor(loyaltyXp).toLocaleString()} loyalty points accumulated</div><div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-yellow-100 transition-all duration-700" style={{width: Math.max(0,Math.min(100,progress))+"%"}} /></div><div className="mt-2 flex justify-between text-[9px] text-white/45"><span>{tier} progress</span><span>{Math.round(progress)}%</span></div></div>
-                <div className="space-y-2">{[["Bronze","1,000 points","Welcome status"],["Silver","5,000 points","Silver lounge access"],["Gold","15,000 points","Gold profile frame"],["Platinum","50,000 points","Platinum showcase"],["Diamond","50,000+ points","Prestige tier"]].map((x,i)=><div key={x[0]} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-300/10 text-amber-200"><Star className="h-4 w-4" /></span><span className="min-w-0 flex-1"><b className="block text-xs">{x[0]}</b><span className="text-[10px] text-white/45">{x[1]} · {x[2]}</span></span>{tier===x[0]&&<BadgeCheck className="h-5 w-5 text-emerald-300" />}</div>)}</div>
+                <div className="rounded-2xl border border-amber-300/25 bg-gradient-to-br from-[#46331d] via-[#241a22] to-[#171325] p-4"><div className="flex items-center justify-between"><Pill tone="gold">CURRENT TIER</Pill><Crown className="h-7 w-7 text-amber-200" /></div><div className="mt-3 text-2xl font-black text-amber-100">{tier} Member</div><div className="mt-1 text-xs text-white/55">{Math.floor(loyaltyXp).toLocaleString()} loyalty points accumulated</div><div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-yellow-100 transition-all duration-700" style={{width: Math.max(0,Math.min(100,progress))+"%"}} /></div><div className="mt-2 flex justify-between text-[9px] text-white/45"><span>{loyalty.remaining.toLocaleString()} points to {loyalty.next?.name ?? "max tier"}</span><span>{Math.round(progress)}%</span></div></div>
+                <div className="space-y-2">{CASINO_LOYALTY_TIERS.map((x)=><div key={x.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-300/10 text-amber-200"><Star className="h-4 w-4" /></span><span className="min-w-0 flex-1"><b className="block text-xs">{x.name}</b><span className="text-[10px] text-white/45">{x.threshold.toLocaleString()} points · {x.reward}</span></span>{tier===x.name&&<BadgeCheck className="h-5 w-5 text-emerald-300" />}</div>)}</div>
                 <Card className="border-violet-300/15 bg-[#171325] p-3"><div className="flex items-center gap-2 text-xs font-bold"><Sparkles className="h-4 w-4 text-violet-200" /> How points work</div><p className="mt-1 text-[10px] text-white/50">Points mirror cumulative virtual chips wagered. No paid membership and no cash-equivalent loyalty rewards.</p></Card>
               </div>
             ) : (
               <div className="space-y-3 px-4 py-4">
-                <Subhead title="Game activity" subtitle="Recent virtual casino result" back={() => setSection("home")} />
-                {activity.length ? activity.map((a,i)=><Card key={i} className="border-white/10 bg-[#171325] p-3"><div className="flex items-center justify-between"><b className="text-sm capitalize">{a.game}</b><span className="text-[10px] text-white/45">{new Date(a.at).toLocaleString()}</span></div><div className="mt-2 flex justify-between text-xs"><span className="text-white/50">Bet {a.bet.toLocaleString()} chips</span><b className={a.payout>=a.bet?"text-emerald-300":"text-rose-300"}>{a.payout>=a.bet?"+":""}{(a.payout-a.bet).toLocaleString()} net</b></div></Card>) : <Card className="border-white/10 bg-[#171325] p-5 text-center"><Clock3 className="mx-auto h-7 w-7 text-violet-200" /><b className="mt-2 block text-sm">No completed rounds yet</b><p className="mt-1 text-[10px] text-white/45">Your latest result will appear here.</p><Button className="mt-3 bg-violet-600" onClick={() => setSection("games")}>Browse games</Button></Card>}
+                <Subhead title="Latest round" subtitle="Most recently completed virtual round" back={() => setSection("home")} />
+                {activity.length ? activity.map((a,i)=><Card key={i} className="border-white/10 bg-[#171325] p-3"><div className="flex items-center justify-between"><b className="text-sm capitalize">{a.game}</b><span className="text-[10px] text-white/45">{new Date(a.at).toLocaleString()}</span></div><div className="mt-2 flex justify-between text-xs"><span className="text-white/50">Bet {a.bet.toLocaleString()} chips</span><b className={a.payout>=a.bet?"text-emerald-300":"text-rose-300"}>{a.payout>=a.bet?"+":""}{(a.payout-a.bet).toLocaleString()} net</b></div></Card>) : <Card className="border-white/10 bg-[#171325] p-5 text-center"><Clock3 className="mx-auto h-7 w-7 text-violet-200" /><b className="mt-2 block text-sm">No completed rounds yet</b><p className="mt-1 text-[10px] text-white/45">A completed game result will appear here.</p><Button className="mt-3 bg-violet-600" onClick={() => setSection("games")}>Browse games</Button></Card>}
                 <div className="text-[10px] text-white/40">Full lifetime statistics remain available in the casino tables.</div>
               </div>
             )}
