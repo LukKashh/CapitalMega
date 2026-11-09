@@ -170,10 +170,13 @@ service cloud.firestore {
         && request.resource.data.tag == getAfter(
           /databases/$(database)/documents/corporations/$(corpId)
         ).data.tag
-        && request.resource.data.dissolved == getAfter(
+        && getAfter(
           /databases/$(database)/documents/corporations/$(corpId)
-        ).data.dissolved;
-      allow delete: if isAdmin();
+        ).data.dissolved == false;
+      allow delete: if canPublishCorporationProjection(corpId)
+        && getAfter(
+          /databases/$(database)/documents/corporations/$(corpId)
+        ).data.dissolved == true;
     }
 
     // Administrator adjustment audit trail (append-only for admins)
