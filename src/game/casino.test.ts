@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { apply, newPlayer, type Ctx } from "./engine";
 import { CASINO, EMPTY_MODS, PROPERTIES, PROPERTY_NET_BOOST } from "./config";
 import { minesMultiplier } from "./casino";
+import { casinoLoyaltyTier, casinoLoyaltyProgress } from "./casino-loyalty";
 
 const T0 = 1_700_000_000_000;
 const ctx = (cash = 0): Ctx => {
@@ -40,6 +41,15 @@ describe("casino", () => {
     const last = c.s.casino!.last!;
     expect([0, 20]).toContain(last.payout);
     expect(c.s.casino!.chips).toBe(90 + last.payout);
+  });
+  it("derives loyalty tiers and progress from persisted wager totals", () => {
+    expect(casinoLoyaltyTier(999)).toBe("bronze");
+    expect(casinoLoyaltyTier(1000)).toBe("silver");
+    expect(casinoLoyaltyTier(5000)).toBe("gold");
+    expect(casinoLoyaltyTier(15000)).toBe("platinum");
+    expect(casinoLoyaltyTier(50000)).toBe("diamond");
+    expect(casinoLoyaltyProgress(500).progress).toBeCloseTo(0.5);
+    expect(casinoLoyaltyProgress(5000).tier.name).toBe("Gold");
   });
   it("mines multiplier grows with each safe tile", () => {
     expect(minesMultiplier(3, 1)).toBeCloseTo((25 / 22) * 0.97, 6);
