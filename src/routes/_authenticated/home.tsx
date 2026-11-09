@@ -93,12 +93,12 @@ function HomePage() {
       x,
       y,
       size: Math.max(260, farthestCorner * 2.12),
-      duration: 2200,
+      duration: 3000,
     };
     setRipples((list) => [...list.slice(-11), ripple]);
     setTimeout(
       () => setRipples((list) => list.filter((item) => item.id !== ripple.id)),
-      ripple.duration + 360,
+      ripple.duration + 500,
     );
   };
 
