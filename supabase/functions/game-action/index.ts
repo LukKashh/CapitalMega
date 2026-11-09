@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { apply, tick, reconcileState, netWorth, checkAchievements } from "./game/engine.ts";
 import { EMPTY_MODS } from "./game/config.ts";
-import type { Ctx } from "./game/engine.ts";
+import type { Ctx, Action } from "./game/engine.ts";
 import type { PlayerState } from "./game/types.ts";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json","Cache-Control":"no-store"}});
@@ -13,8 +13,16 @@ Deno.serve(async req=>{
  const url=Deno.env.get("SUPABASE_URL"),anon=Deno.env.get("SUPABASE_ANON_KEY"),service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!url||!anon||!service)return reply({error:"server_misconfigured"},500);
  const auth=createClient(url,anon,{global:{headers:{Authorization:authorization}},auth:{persistSession:false,autoRefreshToken:false}});
  const {data:authData,error:authError}=await auth.auth.getUser();if(authError||!authData.user)return reply({error:"unauthorized"},401);
- let body:any;try{body=await req.json()}catch{return reply({error:"invalid_json"},400)}
- const action=body?.action??null,key=body?.key;
+ let body: Record<string, unknown>;
+ try {
+  const parsed: unknown = await req.json();
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return reply({ error: "invalid_json" }, 400);
+  body = parsed as Record<string, unknown>;
+ } catch {
+  return reply({ error: "invalid_json" }, 400);
+ }
+ const action = (body.action ?? null) as Action | null;
+ const key = body.key;
  if(action&&(typeof key!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(key)))return reply({error:"invalid_idempotency_key"},400);
  if(action&&(typeof action.type!=="string"||corpActions.has(action.type)||action.type.startsWith("casino")))return reply({error:"unsupported_action_type"},400);
  const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}}),uid=authData.user.id;
