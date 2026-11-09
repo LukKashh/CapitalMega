@@ -53,8 +53,14 @@ Deno.serve(async req=>{
   try{tick(ctx);if(action)apply(ctx,action);checkAchievements(ctx)}catch(e){return reply({ok:false,error:e instanceof Error?e.message:"action_failed"},422)}
   const nw=Math.max(0,Math.round(netWorth(state,now).total)),response={ok:true,now,state,corp:null};
   const {data:committed,error:commitError}=await admin.rpc("commit_game_action",{p_user_id:uid,p_idempotency_key:action?key:`tick-${now}-${version}`,p_action_type:action?.type??"tick",p_expected_version:version,p_state:state,p_public_player:{username:state.username||"Player",level:state.level||1,net_worth:nw,corporation_tag:null},p_response:response,p_ledger:ctx.ledger.map(l=>({type:l.type,source:l.source,destination:l.destination,amount:l.amount,entity:l.entity??""})),p_stock:ctx.stock.map(x=>({item_id:x.item,qty:x.qty,edition_limit:x.max})),p_corporation:null});
-  if(!commitError)return reply(committed);if(commitError.code==="40001"||String(commitError.message).includes("player_state_conflict"))continue;
-  if(String(commitError.message).includes("collectible_sold_out"))return reply({ok:false,error:"This limited edition is sold out"},409);return reply({error:"action_commit_failed",detail:commitError.message},500);
+  if(!commitError)return reply(committed);
+  // Never fan out conflicting commits: retries amplify row locks and exhaust PostgREST's pool.
+  if(commitError.code==="40001"||String(commitError.message).includes("player_state_conflict")){
+   return reply({ok:false,error:"save_conflict_retry_once"},409);
+  }
+  if(String(commitError.message).includes("collectible_sold_out"))return reply({ok:false,error:"This limited edition is sold out"},409);
+  if(readError)return reply({error:"player_read_failed"},503);
+  return reply({error:"action_commit_failed",detail:commitError.message},500);
  }
- return reply({error:"busy_retry"},409);
+ return reply({error:"save_conflict_retry_once"},409);
 });
