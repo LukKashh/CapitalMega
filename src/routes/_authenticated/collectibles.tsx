@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Grid3x3, List } from "lucide-react";
+import { ChevronLeft, ChevronRight, Grid3x3, List } from "lucide-react";
 import { useGame, useNow } from "@/hooks/use-game";
 import {
   CATEGORIES,
