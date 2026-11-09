@@ -110,7 +110,7 @@ export function BankingHub({ onClose }: { onClose: () => void }) {
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
           <Button variant="ghost" size="sm" onClick={() => setScreen("hub")} className="mb-2 gap-2"><ArrowLeft className="h-4 w-4" /> Banking HUB</Button>
           <div className="mb-3 px-1"><h2 className="text-lg font-black">Banking Service Offers</h2><p className="text-xs text-muted-foreground">Compare institutions and open an account.</p></div>
-          <BankingWorkspace />
+          <BankingWorkspace initialSection="institutions" sectionLock />
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
