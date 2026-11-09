@@ -1,8 +1,24 @@
 import { useEffect, useState } from "react";
-import { Activity, CheckCircle2, Code2, Globe, Monitor, ShieldCheck, UserRound, Wifi, WifiOff } from "lucide-react";
+import {
+  Activity,
+  CheckCircle2,
+  Code2,
+  Globe,
+  Monitor,
+  ShieldCheck,
+  UserRound,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 const ADMIN_EMAILS = new Set([
@@ -50,10 +66,39 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
   }, []);
 
   const diagnostics = [
-    { label: "Authentication", value: user ? "Authenticated" : "No active user", detail: user?.isAnonymous ? "Anonymous guest session" : "Firebase account session", icon: ShieldCheck, ok: !!user },
-    { label: "Network", value: online ? "Online" : "Offline", detail: online ? "Browser reports an active connection" : "Browser reports no network connection", icon: online ? Wifi : WifiOff, ok: online },
-    { label: "Runtime", value: typeof window === "undefined" ? "Server" : "Browser", detail: typeof window === "undefined" ? "Server rendering context" : "Client-side application runtime", icon: Globe, ok: true },
-    { label: "Viewport", value: viewport, detail: "Current browser viewport dimensions", icon: Monitor, ok: true },
+    {
+      label: "Authentication",
+      value: user ? "Authenticated" : "No active user",
+      detail: user?.isAnonymous ? "Anonymous guest session" : "Firebase account session",
+      icon: ShieldCheck,
+      ok: !!user,
+    },
+    {
+      label: "Network",
+      value: online ? "Online" : "Offline",
+      detail: online
+        ? "Browser reports an active connection"
+        : "Browser reports no network connection",
+      icon: online ? Wifi : WifiOff,
+      ok: online,
+    },
+    {
+      label: "Runtime",
+      value: typeof window === "undefined" ? "Server" : "Browser",
+      detail:
+        typeof window === "undefined"
+          ? "Server rendering context"
+          : "Client-side application runtime",
+      icon: Globe,
+      ok: true,
+    },
+    {
+      label: "Viewport",
+      value: viewport,
+      detail: "Current browser viewport dimensions",
+      icon: Monitor,
+      ok: true,
+    },
   ];
 
   return (
@@ -64,7 +109,9 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 text-violet-200">
               <Code2 className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-xl font-semibold tracking-tight sm:text-2xl">Developer Console</DialogTitle>
+            <DialogTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Developer Console
+            </DialogTitle>
             <DialogDescription className="text-slate-400">
               Restricted diagnostic workspace for authorized Capitalfortune administrators.
             </DialogDescription>
@@ -73,7 +120,9 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-emerald-300">
               <CheckCircle2 className="h-3.5 w-3.5" /> Administrator access
             </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300">Read-only diagnostics</span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300">
+              Read-only diagnostics
+            </span>
           </div>
         </div>
 
@@ -86,8 +135,12 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
               {diagnostics.map((item) => (
                 <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium uppercase tracking-wider text-slate-400">{item.label}</span>
-                    <item.icon className={`h-4 w-4 ${item.ok ? "text-emerald-300" : "text-amber-300"}`} />
+                    <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                      {item.label}
+                    </span>
+                    <item.icon
+                      className={`h-4 w-4 ${item.ok ? "text-emerald-300" : "text-amber-300"}`}
+                    />
                   </div>
                   <div className="mt-2 text-base font-semibold text-white">{item.value}</div>
                   <p className="mt-1 text-xs leading-relaxed text-slate-400">{item.detail}</p>
@@ -101,17 +154,38 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
               <UserRound className="h-4 w-4 text-violet-300" /> Current administrator session
             </div>
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div><dt className="text-xs text-slate-500">Email</dt><dd className="mt-1 break-all text-slate-200">{user?.email ?? "Unavailable"}</dd></div>
-              <div><dt className="text-xs text-slate-500">Email verification</dt><dd className="mt-1 text-slate-200">{user?.emailVerified ? "Verified" : "Not verified / unavailable"}</dd></div>
-              <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Firebase user ID</dt><dd className="mt-1 break-all font-mono text-xs text-slate-300">{user?.uid ?? "Unavailable"}</dd></div>
+              <div>
+                <dt className="text-xs text-slate-500">Email</dt>
+                <dd className="mt-1 break-all text-slate-200">{user?.email ?? "Unavailable"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Email verification</dt>
+                <dd className="mt-1 text-slate-200">
+                  {user?.emailVerified ? "Verified" : "Not verified / unavailable"}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-xs text-slate-500">Firebase user ID</dt>
+                <dd className="mt-1 break-all font-mono text-xs text-slate-300">
+                  {user?.uid ?? "Unavailable"}
+                </dd>
+              </div>
             </dl>
           </section>
 
           <p className="text-xs leading-relaxed text-slate-500">
-            This console currently exposes diagnostics only. It does not modify player saves, balances, accounts, or live game data. Authorization is checked against the existing Firestore administrator policy; Firestore security rules remain the enforcement boundary.
+            This console currently exposes diagnostics only. It does not modify player saves, balances,
+            accounts, or live game data. Authorization is checked against the existing Firestore
+            administrator policy; Firestore security rules remain the enforcement boundary.
           </p>
           <div className="flex justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-white/15 bg-white/5 text-white hover:bg-white/10">Close console</Button>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="border-white/15 bg-white/5 text-white hover:bg-white/10"
+            >
+              Close console
+            </Button>
           </div>
         </div>
       </DialogContent>
