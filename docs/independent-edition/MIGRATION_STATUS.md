@@ -10,12 +10,13 @@
 - Verified the commit primitive is executable by `service_role`, not by `authenticated`, and the Supabase security advisor reports no findings.
 - Deployed the authenticated `game-session` Edge Function (JWT verification enabled). It validates the caller's Supabase Auth session and reads only that caller's player state and profile through RLS.
 - Committed the Edge Function source to `supabase/functions/game-session/index.ts`.
+- Added a typed frontend helper at `src/lib/supabase-game-session.ts` for invoking the authenticated session endpoint.
 
 ## Not yet completed
+- The session helper is not yet wired into the route tree or game hook; the app still uses Firebase.
 - `game-session` is a read/bootstrap endpoint; it does not yet execute game actions or call the atomic commit primitive.
 - The original game engine (businesses, property, markets, banking, casino, collectibles, achievements and corporation rules) still needs to be ported into trusted Edge Function code.
-- Existing frontend still imports Firebase for authentication and game persistence.
-- Supabase Auth screens, typed persistence adapter, Storage buckets/policies and game seed data remain to be implemented.
+- Supabase Auth screens, Storage buckets/policies and game seed data remain to be implemented.
 - Corporation membership/public projection synchronization and collectible stock seed data remain outstanding.
 - Capacitor configuration, Android project generation, Android build, emulator/device verification and release signing remain outstanding.
 - No installable APK or deployable independent web release has been produced.
