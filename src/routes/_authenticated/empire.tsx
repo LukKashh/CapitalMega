@@ -271,7 +271,10 @@ function EmpirePage() {
                     <div className="truncate text-sm font-semibold">{d.name}</div>
                     <div className="truncate text-[10px] text-muted-foreground">{d.industry}</div>
                     <div className="mt-1 text-[11px] text-muted-foreground">
-                      Base revenue <span className="num font-semibold text-gain">{money(d.revenue)}/h</span>
+                      Base revenue{" "}
+                      <span className="num font-semibold text-gain">
+                        {money(d.revenue)}/h
+                      </span>
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
