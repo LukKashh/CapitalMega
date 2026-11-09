@@ -31,14 +31,16 @@ function LeaderboardPage() {
   const [corpCriterion, setCorpCriterion] = useState<CorpCriterion>("activity");
 
   const { data: playersLeaderboard, isLoading: isLoadingPlayers } = useQuery({
-    queryKey: ["leaderboard-players"],
-    queryFn: () => getLeaderboard(),
+    queryKey: ["leaderboard-players", playerCriterion],
+    queryFn: () => getLeaderboard(playerCriterion),
+    enabled: category === "players",
     refetchInterval: 30_000,
   });
 
   const { data: corpsLeaderboard, isLoading: isLoadingCorps } = useQuery({
-    queryKey: ["leaderboard-corps"],
-    queryFn: () => getCorporationLeaderboard(),
+    queryKey: ["leaderboard-corps", corpCriterion],
+    queryFn: () => getCorporationLeaderboard(corpCriterion),
+    enabled: category === "corporations",
     refetchInterval: 30_000,
   });
 
@@ -47,18 +49,9 @@ function LeaderboardPage() {
     return [...playersLeaderboard].slice(0, 10);
   }, [playersLeaderboard]);
 
-  const sortedCorps = useMemo(() => {
-    if (!corpsLeaderboard) return [];
-    const list = [...corpsLeaderboard];
-    if (corpCriterion === "activity") {
-      list.sort((a, b) => b.activity - a.activity);
-    } else if (corpCriterion === "experience") {
-      list.sort((a, b) => b.xp - a.xp);
-    } else if (corpCriterion === "valuation") {
-      list.sort((a, b) => b.valuation - a.valuation);
-    }
-    return list.slice(0, 10);
-  }, [corpsLeaderboard, corpCriterion]);
+  // Corporation ranking is ordered and capped by Firestore; only ten rows
+  // are transferred to this screen.
+  const sortedCorps = useMemo(() => corpsLeaderboard ?? [], [corpsLeaderboard]);
 
   const isLoading = category === "players" ? isLoadingPlayers : isLoadingCorps;
 
