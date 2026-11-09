@@ -239,7 +239,7 @@ function MarketsPage() {
                       { id: "crypto", label: "Crypto" },
                     ]}
                   />
-                  <div className="my-2.5 grid grid-cols-2 gap-2 text-xs">
+                  <div className="my-2.5 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
                     <div>
                       <div className="text-[10px] text-muted-foreground">
                         {pf === "stocks" ? "Stocks" : "Crypto"} value
@@ -250,7 +250,7 @@ function MarketsPage() {
                       </div>
                     </div>
                     {pf === "stocks" ? (
-                      <div className="text-right">
+                      <div className="sm:text-right">
                         <div className="text-[10px] text-muted-foreground">Dividend income</div>
                         <div className="num font-semibold text-gain">{money(divDay)}/day</div>
                         <div className="text-[10px] text-muted-foreground">
@@ -258,7 +258,7 @@ function MarketsPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-right">
+                      <div className="sm:text-right">
                         <div className="text-[10px] text-muted-foreground">Holdings Count</div>
                         <div className="num font-semibold">{shown.length} assets</div>
                       </div>

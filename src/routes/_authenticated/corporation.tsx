@@ -286,14 +286,14 @@ function InCorp({ data, corp }: { data: GameData; corp: CorpView }) {
       <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1">
         {tab === "overview" && (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Stat
                 label="Treasury"
                 value={money(corp.treasury)}
                 tone="primary"
                 sub={isFounder ? "Only you can spend" : "Founder-controlled"}
               />
-              <Stat label="Your total contribution" value={money(me?.total ?? 0)} />
+              <Stat label="Your contribution" value={money(me?.total ?? 0)} />
             </div>
             <Card>
               <div className="text-sm font-semibold">Contribute</div>

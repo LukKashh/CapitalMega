@@ -22,12 +22,22 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isAuthorizedAdminEmail() {
+      return isSignedIn()
+        && 'email' in request.auth.token
+        && request.auth.token.email is string
+        && (
+          request.auth.token.email == "puncisters@gmail.com"
+          || request.auth.token.email == "lukass16.ivanovs@gmail.com"
+          || request.auth.token.email == "lukass21.ivanovs@gmail.com"
+          || request.auth.token.email.matches('(?i)^(puncisters@gmail\\.com|lukass16\\.ivanovs@gmail\\.com|lukass21\\.ivanovs@gmail\\.com)$')
+        );
+    }
+
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == "puncisters@gmail.com"
-        || request.auth.token.email == "lukass16.ivanovs@gmail.com"
-        || request.auth.token.email == "lukass21.ivanovs@gmail.com"
-        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        || isAuthorizedAdminEmail()
       );
     }
 
@@ -82,27 +92,29 @@ service cloud.firestore {
         && data.userId is string && data.userId.size() <= 128;
     }
 
-    // Admin collection
+    // Admin collection: readable by signed-in users, writable by admins or authorized admin email bootstrapping their record
     match /admins/{userId} {
-      allow get: if isSignedIn();
-      allow list, write: if false;
+      allow get, list: if isSignedIn();
+      allow create, update: if isAdmin() || (isAuthorizedAdminEmail() && request.auth.uid == userId);
+      allow delete: if isAdmin();
     }
 
     // Player state collection (cloud-saved game per player)
     match /player_states/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isOwner(userId)
+      allow get, list: if isSignedIn();
+      allow create: if (isOwner(userId) || isAdmin())
         && isValidPlayerState(incoming())
         && incoming().userId == userId;
-      allow update: if (isOwner(userId) || isAdmin())
+      allow update: if (
+          (isOwner(userId) && (!('userId' in existing()) || existing().userId == userId))
+          || isAdmin()
+        )
         && isValidPlayerState(incoming())
-        && incoming().userId == userId
-        && incoming().userId == existing().userId;
-      allow delete: if false;
+        && incoming().userId == userId;
+      allow delete: if isAdmin();
     }
 
-    // Administrator adjustment audit trail (append-only).
+    // Administrator adjustment audit trail (append-only for admins)
     match /admin_audit/{entryId} {
       allow get, list: if isAdmin();
       allow create: if isAdmin()
@@ -112,10 +124,11 @@ service cloud.firestore {
           'previousLevel', 'resultingLevel', 'createdAt'
         ])
         && incoming().actorUid == request.auth.uid
+        && (incoming().actorEmail == null || incoming().actorEmail is string)
         && incoming().targetUid is string
         && incoming().targetUsername is string
         && incoming().operation in [
-          'set-balance', 'add-balance', 'subtract-balance', 'grant-xp', 'set-xp'
+          'set-balance', 'add-balance', 'subtract-balance', 'grant-xp', 'set-xp', 'set-level'
         ]
         && incoming().enteredAmount is number
         && incoming().previousValue is number
@@ -123,7 +136,7 @@ service cloud.firestore {
         && incoming().previousLevel is number
         && incoming().resultingLevel is number
         && incoming().createdAt is number;
-      allow update, delete: if false;
+      allow update, delete: if isAdmin();
     }
 
     // Online player corporations
@@ -142,21 +155,21 @@ service cloud.firestore {
           || (existing().applications != null && existing().applications[request.auth.uid] != null)
           || (existing().invites != null && existing().invites[request.auth.uid] != null)
         );
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // Ledger transactions (append-only)
     match /ledger/{ledgerId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && isValidLedger(incoming());
-      allow update, delete: if false;
+      allow update, delete: if isAdmin();
     }
 
     // Limited edition collectible stock counters
     match /collectible_stock/{itemId} {
       allow get, list: if isSignedIn();
       allow create, update: if isSignedIn() && isValidCollectibleStock(incoming());
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // Unique username registry
@@ -165,11 +178,11 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && isValidUsername(incoming())
         && incoming().userId == request.auth.uid;
-      allow update: if isSignedIn()
-        && isValidUsername(incoming())
-        && incoming().userId == request.auth.uid
-        && existing().userId == request.auth.uid;
-      allow delete: if false;
+      allow update: if (
+          (isSignedIn() && isValidUsername(incoming()) && incoming().userId == request.auth.uid && (!('userId' in existing()) || existing().userId == request.auth.uid))
+          || isAdmin()
+        );
+      allow delete: if isAdmin();
     }
   }
 }

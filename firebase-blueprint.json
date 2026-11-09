@@ -166,6 +166,101 @@
         }
       },
       "required": ["username", "userId"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Designated administrator identity record",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the administrator",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Administrator email address",
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "description": "Administrator role name",
+          "maxLength": 32
+        },
+        "grantedAt": {
+          "type": "number",
+          "description": "Timestamp when admin role was granted"
+        }
+      },
+      "required": ["userId"]
+    },
+    "AdminAudit": {
+      "title": "AdminAudit",
+      "description": "Append-only administrator action audit trail",
+      "type": "object",
+      "properties": {
+        "actorUid": {
+          "type": "string",
+          "description": "UID of administrator taking action",
+          "maxLength": 128
+        },
+        "actorEmail": {
+          "type": "string",
+          "description": "Email of administrator taking action",
+          "maxLength": 128
+        },
+        "targetUid": {
+          "type": "string",
+          "description": "Target player UID",
+          "maxLength": 128
+        },
+        "targetUsername": {
+          "type": "string",
+          "description": "Target player username",
+          "maxLength": 32
+        },
+        "operation": {
+          "type": "string",
+          "description": "Operation type (set-balance, add-balance, subtract-balance, grant-xp, set-xp, set-level)",
+          "maxLength": 32
+        },
+        "enteredAmount": {
+          "type": "number",
+          "description": "Numeric adjustment entered"
+        },
+        "previousValue": {
+          "type": "number",
+          "description": "Pre-adjustment value"
+        },
+        "resultingValue": {
+          "type": "number",
+          "description": "Post-adjustment value"
+        },
+        "previousLevel": {
+          "type": "number",
+          "description": "Pre-adjustment level"
+        },
+        "resultingLevel": {
+          "type": "number",
+          "description": "Post-adjustment level"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp in milliseconds"
+        }
+      },
+      "required": [
+        "actorUid",
+        "targetUid",
+        "targetUsername",
+        "operation",
+        "enteredAmount",
+        "previousValue",
+        "resultingValue",
+        "previousLevel",
+        "resultingLevel",
+        "createdAt"
+      ]
     }
   },
   "firestore": {
@@ -188,6 +283,14 @@
     "/usernames/{usernameLower}": {
       "schema": "UsernameRecord",
       "description": "Unique username reservation index"
+    },
+    "/admins/{userId}": {
+      "schema": "AdminRecord",
+      "description": "Authorized administrator records for role-based authorization"
+    },
+    "/admin_audit/{entryId}": {
+      "schema": "AdminAudit",
+      "description": "Audit trail entries for administrative data adjustments"
     }
   }
 }

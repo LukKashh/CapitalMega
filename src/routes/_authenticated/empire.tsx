@@ -287,7 +287,7 @@ function EmpirePage() {
         {tab === "report" && (
           <div className="space-y-3">
             <OverviewPanel />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Stat label="Revenue /h" value={money(totals.rev)} />
               <Stat label="Expenses /h" value={money(totals.exp)} />
               <Stat

@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
-import { logOut } from "@/lib/firebase";
+import { auth, logOut } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BankingView } from "./BankingView";
 import { TaxView } from "./TaxView";
@@ -73,11 +74,18 @@ export function AppShell() {
 
   useEffect(() => {
     let active = true;
-    void checkDeveloperAccess().then((allowed) => {
-      if (active) setIsDeveloper(allowed);
+    const verify = () => {
+      void checkDeveloperAccess().then((allowed) => {
+        if (active) setIsDeveloper(allowed);
+      });
+    };
+    verify();
+    const unsubscribe = onAuthStateChanged(auth, () => {
+      verify();
     });
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -339,7 +347,7 @@ function UsernameDialog() {
   const [name, setName] = useState("");
   return (
     <Dialog open>
-      <DialogContent className="max-w-sm [&>button]:hidden">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm [&>button]:hidden">
         <DialogHeader>
           <DialogTitle>Choose your tycoon name</DialogTitle>
           <DialogDescription>

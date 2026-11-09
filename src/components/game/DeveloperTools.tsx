@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
-import { collection, doc, getDoc, getDocs, runTransaction } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, runTransaction, setDoc } from "firebase/firestore";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,24 @@ const ADMIN_EMAILS = new Set([
 export async function checkDeveloperAccess(): Promise<boolean> {
   const user = auth.currentUser;
   if (!user) return false;
-  if (user.email && ADMIN_EMAILS.has(user.email.toLowerCase())) return true;
+  const isEmailAdmin = !!(user.email && ADMIN_EMAILS.has(user.email.toLowerCase()));
+  if (isEmailAdmin) {
+    try {
+      const adminRef = doc(db, "admins", user.uid);
+      const snapshot = await getDoc(adminRef);
+      if (!snapshot.exists()) {
+        await setDoc(adminRef, {
+          userId: user.uid,
+          email: user.email?.toLowerCase(),
+          role: "admin",
+          grantedAt: Date.now(),
+        });
+      }
+    } catch (error) {
+      console.warn("Unable to sync admin document:", error);
+    }
+    return true;
+  }
   try {
     const adminRecord = await getDoc(doc(db, "admins", user.uid));
     return adminRecord.exists();
@@ -64,7 +81,7 @@ type PlayerRecord = {
   state: PlayerState;
 };
 
-type AdjustmentKind = "set-balance" | "add-balance" | "subtract-balance" | "grant-xp" | "set-xp";
+type AdjustmentKind = "set-balance" | "add-balance" | "subtract-balance" | "grant-xp" | "set-xp" | "set-level";
 const MAX_ADJUSTMENT = 1_000_000_000_000_000;
 
 const fieldClass =
@@ -193,6 +210,10 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
       setError(`Current-level XP must be below ${xpForLevel(player.level).toLocaleString()}.`);
       return;
     }
+    if (kind === "set-level" && (parsed < 1 || parsed > 100)) {
+      setError("Enter a valid player level between 1 and 100.");
+      return;
+    }
 
     const operationLabels: Record<AdjustmentKind, string> = {
       "set-balance": "Set wallet balance",
@@ -200,6 +221,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
       "subtract-balance": "Subtract wallet balance",
       "grant-xp": "Grant XP through progression",
       "set-xp": "Set current-level XP progress",
+      "set-level": "Set player level",
     };
     if (!confirmed) {
       setConfirmOpen(true);
@@ -210,6 +232,24 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     setError("");
     setNotice("");
     try {
+      // Ensure admin document exists in Firestore before transaction
+      if (user.email && ADMIN_EMAILS.has(user.email.toLowerCase())) {
+        try {
+          const adminRef = doc(db, "admins", user.uid);
+          const snap = await getDoc(adminRef);
+          if (!snap.exists()) {
+            await setDoc(adminRef, {
+              userId: user.uid,
+              email: user.email.toLowerCase(),
+              role: "admin",
+              grantedAt: Date.now(),
+            });
+          }
+        } catch {
+          // Continue if already exists
+        }
+      }
+
       const playerRef = doc(db, "player_states", player.uid);
       const auditRef = doc(db, "admin_audit", crypto.randomUUID());
       const now = Date.now();
@@ -224,7 +264,11 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
         const current = row.state as PlayerState;
         if (!current || typeof current !== "object") throw new Error("Player save has no valid state.");
         const state = JSON.parse(JSON.stringify(current)) as PlayerState;
-        const before = kind.includes("balance") ? Number(state.cash ?? 0) : Number(state.xp ?? 0);
+        const before = kind.includes("balance")
+          ? Number(state.cash ?? 0)
+          : kind === "set-level"
+            ? Number(state.level ?? 1)
+            : Number(state.xp ?? 0);
         let after = before;
 
         if (kind === "set-balance") after = parsed;
@@ -245,43 +289,57 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
           state.xp = parsed;
           after = parsed;
         }
+        if (kind === "set-level") {
+          const targetLevel = Math.max(1, Math.min(100, Math.floor(parsed)));
+          state.level = targetLevel;
+          state.xp = 0;
+          after = targetLevel;
+        }
         if (!Number.isFinite(after) || after < 0 || after > MAX_ADJUSTMENT) {
           throw new Error("The resulting value is outside the supported range.");
         }
         if (kind === "set-balance" || kind === "add-balance" || kind === "subtract-balance") {
           state.cash = after;
         }
-        if (kind === "grant-xp" || kind === "set-xp") {
+        if (kind === "grant-xp" || kind === "set-xp" || kind === "set-level") {
           if (!Number.isFinite(state.level) || state.level < 1) throw new Error("Player level is invalid.");
         }
 
         const calculated = netWorth(state, now);
         const version = currentVersion + 1;
+        const targetUsername = String(state.username || (row as { username?: string }).username || player.username || "Player").slice(0, 32);
+        const previousLevel = Number(current.level ?? (row as { level?: number }).level ?? player.level ?? 1);
+        const resultingLevel = Number(state.level ?? 1);
+        const previousValue = Number(before ?? 0);
+        const resultingValue = Number(after ?? 0);
+        const enteredAmount = Number(parsed);
+        const actorEmail = user.email ? String(user.email).toLowerCase() : "admin@capitalfortune.local";
+
         transaction.set(playerRef, {
           ...row,
           userId: player.uid,
-          username: state.username || row.username || "Player",
+          username: targetUsername,
           level: state.level || 1,
           netWorth: Math.max(0, Math.round(calculated.total)),
           liquid: state.cash + state.reservedCash,
           title: state.profile?.title || "Aspiring Tycoon",
           avatar: state.profile?.avatar || "briefcase",
-          corpTag: row.corpTag ?? null,
+          corpTag: (row as { corpTag?: string | null }).corpTag ?? null,
           version,
           state,
           updatedAt: now,
         });
         transaction.set(auditRef, {
           actorUid: user.uid,
-          actorEmail: user.email ?? null,
+          actorEmail,
           targetUid: player.uid,
-          targetUsername: state.username || player.username,
+          targetUsername,
           operation: kind,
-          enteredAmount: parsed,
-          previousValue: before,
-          resultingValue: after,
-          previousLevel: current.level,
-          resultingLevel: state.level,
+          enteredAmount,
+          previousValue,
+          resultingValue,
+          previousLevel,
+          resultingLevel,
           createdAt: now,
         });
         return { state, version, calculatedTotal: calculated.total, after };
@@ -315,6 +373,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
 
   const balanceOperation = kind.includes("balance");
   const xpOperation = kind === "grant-xp" || kind === "set-xp";
+  const levelOperation = kind === "set-level";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -405,19 +464,21 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
                         <option value="add-balance">Add balance</option>
                         <option value="subtract-balance">Subtract balance</option>
                       </optgroup>
-                      <optgroup label="Player XP">
+                      <optgroup label="Player XP & Level">
                         <option value="grant-xp">Grant XP (normal progression)</option>
                         <option value="set-xp">Set current-level XP progress</option>
+                        <option value="set-level">Set player level</option>
                       </optgroup>
                     </select>
                   </div>
                   <div>
-                    <label className={labelClass} htmlFor="admin-adjustment-amount">{kind === "set-xp" ? "Current-level XP" : balanceOperation ? "Cash amount" : "XP amount"}</label>
+                    <label className={labelClass} htmlFor="admin-adjustment-amount">{kind === "set-xp" ? "Current-level XP" : levelOperation ? "Target player level (1-100)" : balanceOperation ? "Cash amount" : "XP amount"}</label>
                     <input id="admin-adjustment-amount" className={fieldClass} type="number" min="0" max={MAX_ADJUSTMENT} step="any" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter amount" />
                   </div>
                 </div>
                 {kind === "grant-xp" && <p className="text-xs text-slate-500">Uses the existing XP multiplier, level-up, notification and level-reward progression logic.</p>}
                 {kind === "set-xp" && <p className="text-xs text-slate-500">Sets progress within the current level only; it cannot trigger a level-up.</p>}
+                {kind === "set-level" && <p className="text-xs text-slate-500">Directly sets the player's level and resets current-level XP progress to 0.</p>}
                 {balanceOperation && <p className="text-xs text-slate-500">Only the player's wallet cash is changed. Bank deposits, loans and corporation funds remain untouched.</p>}
                 {xpOperation && <p className="text-xs text-slate-500">Direct XP adjustments do not create a wallet adjustment entry in the normal financial ledger.</p>}
                 <Button type="button" onClick={() => void applyAdjustment(false)} disabled={busy || amount.trim() === ""} className="w-full bg-violet-600 text-white hover:bg-violet-500">
@@ -458,7 +519,7 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
             <div className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
               <div className="flex justify-between gap-3"><span className="text-slate-400">Player</span><span className="text-right font-semibold text-white">{player.username}</span></div>
               <div className="break-all text-right font-mono text-[10px] text-slate-500">{player.uid}</div>
-              <div className="flex justify-between gap-3"><span className="text-slate-400">Operation</span><span className="text-right text-white">{kind === "set-balance" ? "Set wallet balance" : kind === "add-balance" ? "Add wallet balance" : kind === "subtract-balance" ? "Subtract wallet balance" : kind === "grant-xp" ? "Grant XP" : "Set current-level XP"}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-400">Operation</span><span className="text-right text-white">{kind === "set-balance" ? "Set wallet balance" : kind === "add-balance" ? "Add wallet balance" : kind === "subtract-balance" ? "Subtract wallet balance" : kind === "grant-xp" ? "Grant XP" : kind === "set-level" ? "Set player level" : "Set current-level XP"}</span></div>
               <div className="flex justify-between gap-3"><span className="text-slate-400">Entered amount</span><span className="font-semibold text-white">{Number(amount).toLocaleString()}</span></div>
               <div className="flex justify-between gap-3"><span className="text-slate-400">Current wallet</span><span className="text-white">{player.cash.toLocaleString()}</span></div>
               <div className="flex justify-between gap-3"><span className="text-slate-400">Current level / XP</span><span className="text-white">LV {player.level} · {player.xp.toLocaleString()} XP</span></div>
