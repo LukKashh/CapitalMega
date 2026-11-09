@@ -62,7 +62,7 @@ methods = """
     @Override
     public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {}
 """
-source = re.sub(r"\\n}\\s*$", methods + "\\n}\\n", source)
+source = re.sub(r"\n}\\s*$", methods + "\n}\n", source)
 if "handleGoogleLoginIntent" not in source:
     raise SystemExit("Failed to inject Google activity result handler.")
 path.write_text(source)
