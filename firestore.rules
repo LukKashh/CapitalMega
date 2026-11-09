@@ -102,6 +102,30 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Administrator adjustment audit trail (append-only).
+    match /admin_audit/{entryId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin()
+        && incoming().keys().hasAll([
+          'actorUid', 'actorEmail', 'targetUid', 'targetUsername',
+          'operation', 'enteredAmount', 'previousValue', 'resultingValue',
+          'previousLevel', 'resultingLevel', 'createdAt'
+        ])
+        && incoming().actorUid == request.auth.uid
+        && incoming().targetUid is string
+        && incoming().targetUsername is string
+        && incoming().operation in [
+          'set-balance', 'add-balance', 'subtract-balance', 'grant-xp', 'set-xp'
+        ]
+        && incoming().enteredAmount is number
+        && incoming().previousValue is number
+        && incoming().resultingValue is number
+        && incoming().previousLevel is number
+        && incoming().resultingLevel is number
+        && incoming().createdAt is number;
+      allow update, delete: if false;
+    }
+
     // Online player corporations
     match /corporations/{corpId} {
       allow get, list: if isSignedIn();
