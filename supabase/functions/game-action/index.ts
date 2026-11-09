@@ -29,9 +29,19 @@ Deno.serve(async req=>{
  }
  const action = (body.action ?? null) as Action | null;
  const key = body.key;
- if(action&&(typeof key!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(key)))return reply({error:"invalid_idempotency_key"},400);
- if (action && (typeof action.type !== "string" || corpActions.has(action.type))) return reply({ error: "unsupported_action_type" }, 400);
  const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}}),uid=authData.user.id;
+
+ // Backwards-compatible, read-only boot path for older clients that send an empty body.
+ // Session loading must never tick, mutate, or retry a full player-state transaction.
+ if (!action) {
+  const {data:row,error:readError}=await admin.from("player_states").select("state").eq("user_id",uid).maybeSingle();
+  if(readError)return reply({error:"player_read_failed"},503);
+  if(!row)return reply({error:"player_not_provisioned"},409);
+  return reply({ok:true,now:Date.now(),state:row.state,corp:null});
+ }
+
+ if(typeof key!=="string"||!/^[A-Za-z0-9_-]{1,128}$/.test(key))return reply({error:"invalid_idempotency_key"},400);
+ if (typeof action.type !== "string" || corpActions.has(action.type)) return reply({ error: "unsupported_action_type" }, 400);
  for(let attempt=0;attempt<4;attempt++){
   const now=Date.now(),{data:row,error:readError}=await admin.from("player_states").select("state,version").eq("user_id",uid).maybeSingle();
   if(readError)return reply({error:"player_read_failed"},500);if(!row)return reply({error:"player_not_provisioned"},409);
