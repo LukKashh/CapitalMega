@@ -445,9 +445,7 @@ function MarketsPage() {
           </div>
         )}
         {tab === "crypto" && (
-          <div className="px-1 text-[11px] text-muted-foreground">
-            24/7 market
-          </div>
+          <div className="px-1 text-[11px] text-muted-foreground">24/7 market</div>
         )}
       </div>
 
