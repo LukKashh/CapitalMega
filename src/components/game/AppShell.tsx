@@ -47,7 +47,7 @@ const NAV = [
   { to: "/markets", label: "Trade-HUB", icon: LineChart },
   { to: "/home", label: "Tap", icon: Home, center: true },
   { to: "/empire", label: "Empire", icon: Building2 },
-  { to: "/corporation", label: "Corp", icon: Briefcase },
+  { to: "/stats", label: "Stats", icon: BarChart3 },
 ] as const;
 
 const MORE = [
