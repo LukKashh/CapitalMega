@@ -215,13 +215,15 @@ function HomePage() {
             <div
               key={ripple.id}
               className="home-liquid-ripple pointer-events-none absolute z-[2]"
-              style={{
-                left: ripple.x,
-                top: ripple.y,
-                width: ripple.size,
-                height: ripple.size,
-                "--ripple-duration": `${ripple.duration}ms`,
-              } as React.CSSProperties}
+              style={
+                {
+                  left: ripple.x,
+                  top: ripple.y,
+                  width: ripple.size,
+                  height: ripple.size,
+                  "--ripple-duration": `${ripple.duration}ms`,
+                } as React.CSSProperties
+              }
             >
               <span className="home-liquid-ring home-liquid-ring-a" />
               <span className="home-liquid-ring home-liquid-ring-b" />
