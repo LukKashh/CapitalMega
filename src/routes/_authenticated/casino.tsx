@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/casino")({
   head: () => ({
     meta: [
       { title: "Capital Casino — Capitalfortune" },
-      { name: "description", content: "A connected virtual casino with five skill-and-chance mini-games, virtual chips and loyalty progress." },
+      { name: "description", content: "A connected virtual casino with five playable mini-games, virtual chips and loyalty progress." },
     ],
   }),
   component: CasinoPage,
@@ -20,15 +20,12 @@ function CasinoPage() {
   const [tableOpen, setTableOpen] = useState(false);
   const navigate = useNavigate();
   if (!data) return <Loading />;
-  return tableOpen ? (
-    <div className="casino-table-shell">
-      <div className="mb-2 flex items-center justify-between">
-        <button onClick={() => setTableOpen(false)} className="text-xs font-bold text-primary">← Casino lobby</button>
-        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Virtual chips only</span>
-      </div>
-      <CasinoTable />
+  if (tableOpen) return <div className="casino-table-shell pb-4">
+    <div className="mb-3 flex items-center justify-between border-b border-violet-400/20 pb-2">
+      <button onClick={() => setTableOpen(false)} className="text-xs font-bold text-primary">← Casino lobby</button>
+      <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Virtual chips only</span>
     </div>
-  ) : (
-    <CasinoHub onClose={() => navigate({ to: "/home" })} onPlay={() => setTableOpen(true)} />
-  );
+    <CasinoTable />
+  </div>;
+  return <CasinoHub onClose={() => navigate({ to: "/home" })} onPlay={() => setTableOpen(true)} />;
 }
