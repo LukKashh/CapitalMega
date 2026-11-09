@@ -17,18 +17,12 @@ export interface GameSession {
   };
 }
 
-/**
- * Loads the authenticated player's canonical session from the Supabase Edge
- * Function. The function validates the access token and applies database RLS;
- * never read or write authoritative player state through a client-side
- * service-role key.
- */
+/** Fetches the signed-in player's canonical state through the authenticated Edge Function. */
 export async function loadGameSession(): Promise<GameSession> {
   const { data, error } = await supabase.functions.invoke<GameSession>("game-session", {
     method: "POST",
     body: {},
   });
-
   if (error) throw error;
   if (!data) throw new Error("The game session endpoint returned no data.");
   return data;
