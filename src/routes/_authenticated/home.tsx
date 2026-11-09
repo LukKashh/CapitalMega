@@ -226,7 +226,7 @@ function HomePage() {
               <span className="home-liquid-impact" />
               <span className="home-liquid-caustic" />
             </div>
-          )}
+          ))}
 
           <div className="home-tap-center pointer-events-none absolute inset-0 z-[3] flex flex-col items-center justify-center gap-3">
             <div className="home-tap-orbit absolute rounded-full" />
