@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  CORP_BUSINESSES,
-  CORP_DEPARTMENTS,
-  CORP_FACILITIES,
-} from "./config";
+import { CORP_BUSINESSES, CORP_DEPARTMENTS, CORP_FACILITIES } from "./config";
 import { corporationLeaderboardEntry } from "./leaderboard";
 import type { CorpState } from "./types";
 
