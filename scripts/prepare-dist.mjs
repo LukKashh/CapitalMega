@@ -95,7 +95,7 @@ if (!prerenderSucceeded) {
     <title>Capitalfortune</title>
     <meta name="description" content="Wealth & Business simulator tycoon with cloud save and cooperative corporations powered by Supabase" />
     <meta property="og:title" content="Capitalfortune" />
-    <meta property="og:description" content="Wealth & Business simulator tycoon with cloud save and cooperative corporations powered by Firebase Firestore" />
+    <meta property="og:description" content="Wealth & Business simulator tycoon with cloud save and cooperative corporations powered by Supabase" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
