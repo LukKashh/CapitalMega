@@ -104,7 +104,6 @@ export function AccountManagerMenu({ onClose }: { onClose?: () => void }) {
             </div>
           </div>
         </Card>
-
       </div>
     </div>
   );
