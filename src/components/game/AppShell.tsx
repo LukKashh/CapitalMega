@@ -47,11 +47,12 @@ const NAV = [
   { to: "/markets", label: "Trade-HUB", icon: LineChart },
   { to: "/home", label: "Tap", icon: Home, center: true },
   { to: "/empire", label: "Empire", icon: Building2 },
-  { to: "/stats", label: "Stats", icon: BarChart3 },
+  { to: "/corporation", label: "Corp", icon: Briefcase },
 ] as const;
 
 const MORE = [
   { to: "/leaderboard", label: "Online Leaderboard", icon: Trophy },
+  { to: "/casino", label: "Casino", icon: Dices },
   { to: "/research", label: "Research & Development", icon: FlaskConical },
   { to: "/achievements", label: "Achievements", icon: Award },
   { to: "/stats", label: "Statistics & Net Worth", icon: BarChart3 },
