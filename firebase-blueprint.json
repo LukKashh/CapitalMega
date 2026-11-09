@@ -307,17 +307,6 @@
         "netWorth": {
           "type": "number"
         },
-        "liquid": {
-          "type": "number"
-        },
-        "title": {
-          "type": "string",
-          "maxLength": 40
-        },
-        "avatar": {
-          "type": "string",
-          "maxLength": 20
-        },
         "corpTag": {
           "type": [
             "string",
@@ -341,9 +330,6 @@
         "username",
         "level",
         "netWorth",
-        "liquid",
-        "title",
-        "avatar",
         "corpTag",
         "corpId",
         "updatedAt"
@@ -377,15 +363,6 @@
         },
         "valuation": {
           "type": "number"
-        },
-        "treasury": {
-          "type": "number"
-        },
-        "membersCount": {
-          "type": "number"
-        },
-        "dissolved": {
-          "type": "boolean"
         }
       },
       "required": [
@@ -395,10 +372,7 @@
         "level",
         "xp",
         "activity",
-        "valuation",
-        "treasury",
-        "membersCount",
-        "dissolved"
+        "valuation"
       ]
     }
   },
