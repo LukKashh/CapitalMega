@@ -1210,8 +1210,7 @@ export function BankingView() {
                                 Credit Line
                               </div>
                               <div className="text-xs font-black text-primary num mt-0.5">
-                                  {money(estCredit)}
-                                </div>
+                                {money(estCredit)}
                               </div>
                             </div>
                           </div>
