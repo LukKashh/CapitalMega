@@ -92,7 +92,8 @@ export function useAct() {
   return {
     run,
     pending: m.isPending,
-    mutateSilent: (action: Action | CorpAction) => m.mutateAsync({ action, silent: true }),
+    mutateSilent: (action: Action | CorpAction) =>
+      m.mutateAsync({ action, key: crypto.randomUUID(), silent: true }),
   };
 }
 
