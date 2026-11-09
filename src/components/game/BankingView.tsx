@@ -26,7 +26,6 @@ import {
   Percent,
   Sparkles,
   ShieldCheck,
-  ChevronRight,
   ArrowDownRight,
   ArrowUpRight,
 } from "lucide-react";
@@ -55,7 +54,7 @@ export function BankingView() {
     "personal" | "business" | "real-estate"
   >("personal");
   const [bankAppTab, setBankAppTab] = useState<
-    "overview" | "payments" | "loans" | "services" | "activity"
+    "overview" | "institutions" | "accounts" | "payments" | "loans" | "services" | "activity"
   >("overview");
 
   const accounts = useMemo(() => data?.state?.bankAccounts || {}, [data?.state?.bankAccounts]);
@@ -94,6 +93,26 @@ export function BankingView() {
     "Business-finance",
   ];
   const filteredBanks = BANKS.filter((b) => selectedCat === "All" || b.category === selectedCat);
+  const totalBankReserves = registeredBankIds.reduce(
+    (total, bankId) => total + (accounts[bankId]?.balance || 0),
+    0,
+  );
+  const isAccountOperation =
+    bankAppTab === "payments" ||
+    bankAppTab === "loans" ||
+    bankAppTab === "services" ||
+    bankAppTab === "activity";
+
+  const bankingSections = [
+    { id: "overview", label: "Overview", description: "Financial snapshot", icon: Wallet },
+    { id: "institutions", label: "Institutions", description: "Browse banks", icon: Landmark },
+    { id: "accounts", label: "My Accounts", description: "Balances and access", icon: Building2 },
+    { id: "payments", label: "Payments", description: "Deposits and withdrawals", icon: ArrowDownRight },
+    { id: "loans", label: "Loans", description: "Credit and repayments", icon: CreditCard },
+    { id: "services", label: "Services", description: "Income routing", icon: Building },
+    { id: "activity", label: "Activity", description: "Transaction history", icon: History },
+  ] as const;
+  const activeSection = bankingSections.find((section) => section.id === bankAppTab)!;
 
   // Modal / dedicated view for bank registration
   if (registering) {
@@ -210,7 +229,7 @@ export function BankingView() {
                 onClick={() => {
                   setRegistering(null);
                   setActiveAccountTab(bank.id);
-                  setBankAppTab("overview");
+                  setBankAppTab("payments");
                   setAmountInput("");
                   setLoanAmountInput("");
                 }}
@@ -227,6 +246,7 @@ export function BankingView() {
                   );
                   setRegistering(null);
                   setActiveAccountTab(bank.id);
+                  setBankAppTab("payments");
                 }}
                 disabled={pending || !canRegister}
               >
@@ -244,33 +264,260 @@ export function BankingView() {
 
   return (
     <div className="banking-view min-w-0 w-full max-w-full space-y-6">
-      {!activeAccountTab && (
-        <div className="space-y-6">
-          <div className="text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
-            Banking Access Menu
-          </div>
-        </div>
-      )}
+      <div className="grid min-w-0 gap-4 md:grid-cols-[190px_minmax(0,1fr)]">
+        <nav
+          aria-label="Banking sections"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:flex md:flex-col md:self-start"
+        >
+          {bankingSections.map((section) => {
+            const Icon = section.icon;
+            const active = bankAppTab === section.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => setBankAppTab(section.id)}
+                className={cn(
+                  "flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left transition-colors md:w-full",
+                  active
+                    ? "border-primary/50 bg-primary/10 text-primary shadow-sm"
+                    : "border-border/70 bg-card/70 text-foreground hover:border-primary/40 hover:bg-muted/70",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                    active ? "bg-primary/15" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-bold">{section.label}</span>
+                  <span className="mt-0.5 hidden truncate text-[10px] text-muted-foreground sm:block">
+                    {section.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
 
-      {/* Individual Bank Application */}
-      {activeAccountTab && (
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.16em] text-primary">
-              Banking Application
+        <main className="min-w-0 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                Banking / {activeSection.label}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{activeSection.description}</p>
             </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">
-              {BANK_BY_ID[activeAccountTab]?.name ?? activeAccountTab}
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Available cash
+              </div>
+              <div className="num text-sm font-black text-gain">{money(s.cash)}</div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setActiveAccountTab(null)}>
-            &larr; Banking Access Menu
-          </Button>
-        </div>
-      )}
 
-      {/* Active Portfolios Section */}
-      {activeAccountTab && registeredBankIds.includes(activeAccountTab) && (
+          {bankAppTab === "overview" && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Card className="space-y-1.5 border-border/70 bg-card/80 p-3.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Player cash
+                  </div>
+                  <div className="num text-lg font-black text-gain">{money(s.cash)}</div>
+                  <div className="text-[10px] text-muted-foreground">Ready to deposit or spend</div>
+                </Card>
+                <Card className="space-y-1.5 border-border/70 bg-card/80 p-3.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Bank reserves
+                  </div>
+                  <div className="num text-lg font-black text-foreground">{money(totalBankReserves)}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Across {registeredBankIds.length} active account{registeredBankIds.length === 1 ? "" : "s"}
+                  </div>
+                </Card>
+                <Card className="space-y-1.5 border-border/70 bg-card/80 p-3.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Outstanding debt
+                  </div>
+                  <div className="num text-lg font-black text-loss">{money(consolidatedDebt)}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {allActiveLoans.length} active loan{allActiveLoans.length === 1 ? "" : "s"}
+                  </div>
+                </Card>
+                <Card className="space-y-1.5 border-border/70 bg-card/80 p-3.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Account capacity
+                  </div>
+                  <div className="num text-lg font-black text-primary">
+                    {registeredBankIds.length}/{MAX_ACTIVE_BANK_ACCOUNTS}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Active bank accounts</div>
+                </Card>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-card/70 p-4">
+                <div className="text-sm font-bold text-foreground">Banking workspace</div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Each banking function now has its own section. Open an institution, review your
+                  accounts, or move directly to payments, loans, services, and activity.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(["institutions", "accounts", "payments", "loans"] as const).map((section) => {
+                    const item = bankingSections.find((entry) => entry.id === section)!;
+                    return (
+                      <Button
+                        key={section}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-[11px]"
+                        onClick={() => setBankAppTab(section)}
+                      >
+                        {item.label} <span className="ml-1 text-primary">&rarr;</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {bankAppTab === "accounts" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Your bank accounts</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Select an account to continue to its payment workspace.
+                  </p>
+                </div>
+                <Pill tone="neutral">
+                  {registeredBankIds.length}/{MAX_ACTIVE_BANK_ACCOUNTS} active
+                </Pill>
+              </div>
+              {registeredBankIds.length === 0 ? (
+                <Card className="space-y-3 border-dashed border-border/80 bg-card/50 p-5 text-center">
+                  <Landmark className="mx-auto h-7 w-7 text-primary" />
+                  <div className="text-sm font-bold text-foreground">No bank accounts yet</div>
+                  <p className="text-xs text-muted-foreground">
+                    Browse the institutions directory to open your first account.
+                  </p>
+                  <Button size="sm" className="mx-auto" onClick={() => setBankAppTab("institutions")}>
+                    Browse institutions
+                  </Button>
+                </Card>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {registeredBankIds.map((bankId) => {
+                    const account = accounts[bankId];
+                    const bank = BANK_BY_ID[bankId];
+                    if (!account) return null;
+                    const brand = bankBrand(bankId);
+                    const activeLoans = (account.loans || []).filter((loan) => loan.status === "active");
+                    return (
+                      <Card key={bankId} className="space-y-3 border-border/80 bg-card/80 p-4">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-xs font-black"
+                            style={{
+                              color: brand.accent,
+                              backgroundColor: brand.soft,
+                              borderColor: brand.border,
+                            }}
+                          >
+                            {(bank?.name ?? bankId).split(" ").map((word) => word[0]).slice(0, 2).join("")}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-bold text-foreground">
+                              {bank?.name ?? bankId}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {bank?.category ?? "Financial institution"}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3">
+                          <div>
+                            <div className="text-[9px] uppercase text-muted-foreground">Reserves</div>
+                            <div className="num mt-0.5 text-sm font-black text-gain">
+                              {money(account.balance || 0)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] uppercase text-muted-foreground">Active loans</div>
+                            <div className="num mt-0.5 text-sm font-black text-loss">{activeLoans.length}</div>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setActiveAccountTab(bankId);
+                            setBankAppTab("payments");
+                            setAmountInput("");
+                            setLoanAmountInput("");
+                          }}
+                        >
+                          Manage account <span className="ml-1">&rarr;</span>
+                        </Button>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isAccountOperation && registeredBankIds.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/70 p-3">
+              <div>
+                <div className="text-xs font-bold text-foreground">Active account</div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground">
+                  Choose which institution this section should manage.
+                </div>
+              </div>
+              <select
+                aria-label="Select bank account"
+                value={
+                  activeAccountTab && registeredBankIds.includes(activeAccountTab)
+                    ? activeAccountTab
+                    : ""
+                }
+                onChange={(event) => {
+                  setActiveAccountTab(event.target.value || null);
+                  setAmountInput("");
+                  setLoanAmountInput("");
+                }}
+                className="h-10 min-w-[180px] max-w-full rounded-lg border border-border bg-background px-3 text-xs text-foreground"
+              >
+                <option value="">Select an account</option>
+                {registeredBankIds.map((bankId) => (
+                  <option key={bankId} value={bankId}>
+                    {BANK_BY_ID[bankId]?.name ?? bankId}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {isAccountOperation && registeredBankIds.length === 0 && (
+            <Card className="space-y-3 border-dashed border-border/80 bg-card/50 p-5 text-center">
+              <Landmark className="mx-auto h-7 w-7 text-primary" />
+              <div className="text-sm font-bold text-foreground">A bank account is required</div>
+              <p className="text-xs text-muted-foreground">
+                Open an account with an institution before using this section.
+              </p>
+              <Button size="sm" className="mx-auto" onClick={() => setBankAppTab("institutions")}>
+                Browse institutions
+              </Button>
+            </Card>
+          )}
+
+          {/* Active Portfolios Section */}
+          {isAccountOperation && activeAccountTab && registeredBankIds.includes(activeAccountTab) && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
@@ -316,19 +563,11 @@ export function BankingView() {
                       activeLoans.length > 0 && "border-loss/40",
                     )}
                   >
-                    {/* Account Header / Summary Bar */}
-                    <div
-                      className="flex items-center justify-between cursor-pointer p-4 select-none"
-                      onClick={() => {
-                        setActiveAccountTab(isSelected ? null : bankId);
-                        setBankAppTab("overview");
-                        setAmountInput("");
-                        setLoanAmountInput("");
-                      }}
-                    >
-                      <div className="flex items-center gap-3.5">
+                    {/* Selected institution summary */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+                      <div className="flex min-w-0 items-center gap-3.5">
                         <div
-                          className="h-11 w-11 rounded-xl flex items-center justify-center transition-all shrink-0 border text-sm font-black"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-sm font-black"
                           style={{
                             color: brand.accent,
                             backgroundColor: brand.soft,
@@ -341,93 +580,37 @@ export function BankingView() {
                             .slice(0, 2)
                             .join("")}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-sm text-foreground">
-                              {bankDef.name}
-                            </span>
-                            <Pill tone="gain" className="text-[8px] uppercase font-bold py-0">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-black text-foreground">{bankDef.name}</span>
+                            <Pill tone="gain" className="py-0 text-[8px] font-bold uppercase">
                               Active
                             </Pill>
-                            <Pill tone="neutral" className="text-[9px] uppercase font-bold py-0">
+                            <Pill tone="neutral" className="py-0 text-[9px] font-bold uppercase">
                               {bankDef.category}
                             </Pill>
                           </div>
-                          <div className="text-[11px] text-muted-foreground flex items-center gap-3 mt-0.5">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                             <span>Yield: {(bankDef.savingsApy * 100).toFixed(1)}% APY</span>
-                            <span>&bull;</span>
+                            <span>•</span>
                             <span>Loan: {(bankDef.loanApr * 100).toFixed(1)}% APR</span>
                           </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-4 text-right">
-                        <div>
-                          <div className="text-[10px] uppercase font-bold text-muted-foreground">
-                            Reserves
-                          </div>
-                          <div className="num font-black text-base text-gain">
-                            {money(acc.balance || 0)}
-                          </div>
+                      <div className="text-right">
+                        <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                          Account reserves
                         </div>
-
-                        {activeLoans.length > 0 && (
-                          <div className="hidden sm:block">
-                            <div className="text-[10px] uppercase font-bold text-loss">
-                              Active Debt
-                            </div>
-                            <div className="num font-black text-base text-loss">
-                              {money(currentDebt)}
-                            </div>
-                          </div>
-                        )}
-
-                        <ChevronRight
-                          className={cn(
-                            "h-5 w-5 text-muted-foreground transition-transform duration-200",
-                            isSelected && "rotate-90 text-primary",
-                          )}
-                        />
+                        <div className="num text-base font-black text-gain">
+                          {money(acc.balance || 0)}
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-5 gap-1 border-t border-border/60 px-3 py-2">
-                      {(
-                        [
-                          ["overview", "Overview"],
-                          ["payments", "Payments"],
-                          ["loans", "Loans"],
-                          ["services", "Services"],
-                          ["activity", "Activity"],
-                        ] as const
-                      ).map(([tab, label]) => (
-                        <button
-                          key={tab}
-                          type="button"
-                          onClick={() => setBankAppTab(tab)}
-                          className={cn(
-                            "rounded-md px-1 py-2 text-[9px] font-bold uppercase tracking-wide transition-colors",
-                            bankAppTab === tab ? "border" : "text-muted-foreground hover:bg-muted",
-                          )}
-                          style={
-                            bankAppTab === tab
-                              ? {
-                                  color: brand.accent,
-                                  backgroundColor: brand.soft,
-                                  borderColor: brand.border,
-                                }
-                              : undefined
-                          }
-                        >
-                          {label}
-                        </button>
-                      ))}
                     </div>
 
                     {/* Expanded Banking Operations Desk */}
                     {isSelected && (
                       <div className="p-4 pt-2 border-t border-border/80 space-y-5 bg-muted/10">
-                        {(bankAppTab === "overview" || bankAppTab === "payments") && (
+                        {(bankAppTab === "payments") && (
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -512,7 +695,7 @@ export function BankingView() {
                           </div>
                         )}
 
-                        {(bankAppTab === "overview" || bankAppTab === "loans") && (
+                        {(bankAppTab === "loans") && (
                           <div className="space-y-3 border-t border-border/80 pt-4">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -701,7 +884,7 @@ export function BankingView() {
                           </div>
                         )}
 
-                        {(bankAppTab === "overview" || bankAppTab === "services") &&
+                        {(bankAppTab === "services") &&
                           (supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
                             <div className="space-y-3 border-t border-border/80 pt-4">
                               <div>
@@ -812,7 +995,7 @@ export function BankingView() {
                           )}
 
                         {/* Sub-panel 3: Institutional Audit Log */}
-                        {(bankAppTab === "overview" || bankAppTab === "activity") &&
+                        {(bankAppTab === "activity") &&
                           acc.transactions &&
                           acc.transactions.length > 0 && (
                             <div className="space-y-2 border-t border-border/80 pt-4">
@@ -888,7 +1071,7 @@ export function BankingView() {
         </div>
       )}
 
-      {!activeAccountTab && (
+          {bankAppTab === "institutions" && (
         <div className="space-y-4">
           {/* Institutions Catalogue (12 Banks) */}
           <div className="space-y-4">
@@ -1033,8 +1216,9 @@ export function BankingView() {
               })}
             </div>
           </div>
-        </div>
-      )}
+          )}
+        </main>
+      </div>
     </div>
   );
 }
