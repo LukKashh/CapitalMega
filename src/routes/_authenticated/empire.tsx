@@ -63,8 +63,8 @@ function EmpirePage() {
   const { run, pending } = useAct();
   const [tab, setTab] = useState<"owned" | "market" | "report">("owned");
   const [detail, setDetail] = useState<CompanyDef | null>(null);
-  const p = useMemo(() => (data ? personalMods(data.state) : null), [data?.state]);
-  const cm = useMemo(() => (data ? corpMods(data.corp) : null), [data?.corp]);
+  const p = useMemo(() => (data ? personalMods(data.state) : null), [data]);
+  const cm = useMemo(() => (data ? corpMods(data.corp) : null), [data]);
   if (!data || !p || !cm) return <Loading />;
   const s = data.state;
   const owned = Object.values(s.companies);
