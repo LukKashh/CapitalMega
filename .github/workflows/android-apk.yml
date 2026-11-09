@@ -8,7 +8,7 @@ on:
     branches: [android/hybrid-local-engine]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
@@ -32,6 +32,33 @@ jobs:
         run: |
           rm -f bun.lock
           bun install
+
+      - name: Format migration source files
+        run: |
+          bunx prettier --write \
+            src/lib/game.functions.ts \
+            src/lib/local-auth.ts \
+            src/lib/local-firestore.ts \
+            src/lib/local-store.ts \
+            src/lib/local-firestore.test.ts \
+            src/routes/_authenticated/route.tsx \
+            src/routes/auth.tsx \
+            src/routes/index.tsx
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add \
+              src/lib/game.functions.ts \
+              src/lib/local-auth.ts \
+              src/lib/local-firestore.ts \
+              src/lib/local-store.ts \
+              src/lib/local-firestore.test.ts \
+              src/routes/_authenticated/route.tsx \
+              src/routes/auth.tsx \
+              src/routes/index.tsx
+            git commit -m "Format hybrid offline migration source"
+            git push
+          fi
 
       - name: Run game and local database tests
         run: bun run test

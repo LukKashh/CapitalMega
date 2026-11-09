@@ -27,7 +27,7 @@ export function query(source: CollectionReference, ...constraints: QueryConstrai
   return { kind: "query", collection: source.collection, constraints };
 }
 function snapshot(id: string, value: unknown | null) {
-  return { id, exists: () => value !== null, data: () => (value ?? {}) as Record<string, any> };
+  return { id, exists: () => value !== null, data: () => (value ?? {}) as Record<string, unknown> };
 }
 export async function getDoc(reference: DocumentReference) {
   return snapshot(reference.id, await readLocalRecord(reference.collection, reference.id));
