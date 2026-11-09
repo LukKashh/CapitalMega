@@ -22,10 +22,8 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -34,23 +32,23 @@ jobs:
           java-version: "21"
 
       - name: Install JavaScript dependencies
-        run: npm install --no-audit --no-fund
+        run: bun install
 
       - name: Run unit tests
-        run: npm run test
+        run: bun run test
 
       - name: Run lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Build web application
-        run: npm run build
+        run: bun run build
 
       - name: Generate Android project
         run: |
           if [ ! -d android ]; then
-            npx cap add android
+            bunx cap add android
           fi
-          npx cap sync android
+          bunx cap sync android
           chmod +x android/gradlew
 
       - name: Persist lockfile and generated Android project
@@ -59,7 +57,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add android package-lock.json
+          git add android bun.lock
           if ! git diff --cached --quiet; then
             git commit -m "build(android): add generated native project [skip ci]"
             git push origin "HEAD:${GITHUB_REF_NAME}"
