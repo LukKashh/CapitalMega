@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { auth, onAuthStateChanged } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { initializeBuildingCatalogue } from "@/lib/buildingCatalogue";
 
 import appCss from "../styles.css?url";
@@ -142,11 +142,11 @@ function RootComponent() {
   const router = useRouter();
   useEffect(() => {
     initializeBuildingCatalogue();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       router.invalidate();
-      if (user) queryClient.invalidateQueries();
+      if (session) queryClient.invalidateQueries();
     });
-    return () => unsubscribe();
+    return () => listener.subscription.unsubscribe();
   }, [router, queryClient]);
 
   return (
