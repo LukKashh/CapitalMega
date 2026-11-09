@@ -49,14 +49,14 @@ function LeaderboardPage() {
     return [...playersLeaderboard].slice(0, 10);
   }, [playersLeaderboard]);
 
-  // Corporation ranking is ordered and capped by Firestore; only ten rows
+  // Corporation ranking is ordered and capped by the server; only ten rows
   // are transferred to this screen.
   const sortedCorps = useMemo(() => corpsLeaderboard ?? [], [corpsLeaderboard]);
 
   const isLoading = category === "players" ? isLoadingPlayers : isLoadingCorps;
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-140px)] max-w-2xl flex-col justify-between overflow-hidden pb-2 pt-1">
+    <div className="mx-auto flex min-h-[calc(100dvh-170px)] w-full max-w-2xl flex-col gap-3 pb-4 pt-1">
       {/* 1. Screen Header */}
       <h1 className="shrink-0 text-center font-sora text-base font-bold tracking-wider text-foreground uppercase">
         ONLINE LEADERBOARDS
@@ -88,7 +88,7 @@ function LeaderboardPage() {
         </div>
       ) : category === "players" ? (
         /* 2.1 Players — User Rankings */
-        <div className="flex flex-1 flex-col justify-between space-y-1.5 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
           <div className="shrink-0 text-center">
             <h2 className="font-sora text-xs font-bold tracking-wide text-foreground uppercase">
               USER RANKINGS
@@ -116,7 +116,7 @@ function LeaderboardPage() {
           </div>
 
           {/* Single Frame Display Window (No Scroll) */}
-          <Card className="flex flex-1 flex-col divide-y divide-border/40 overflow-hidden text-xs">
+          <Card className="flex min-h-0 flex-1 flex-col divide-y divide-border/40 overflow-hidden text-xs">
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-2 bg-muted/40 px-3 py-1.5 font-semibold uppercase tracking-wider text-muted-foreground">
               <div className="col-span-2 text-center">Ranking</div>
@@ -126,7 +126,7 @@ function LeaderboardPage() {
               </div>
             </div>
 
-            <div className="flex flex-1 flex-col justify-around divide-y divide-border/30">
+            <div className="min-h-0 flex-1 divide-y divide-border/30 overflow-y-auto overscroll-contain">
               {sortedPlayers.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   No player data available.
@@ -142,7 +142,7 @@ function LeaderboardPage() {
                   return (
                     <div
                       key={entry.userId}
-                      className="grid grid-cols-12 items-center gap-2 px-3 py-1 transition-colors hover:bg-muted/30"
+                      className="grid grid-cols-12 items-center gap-2 px-3 py-3 transition-colors hover:bg-muted/30"
                     >
                       <div className="col-span-2 text-center font-mono font-bold text-foreground">
                         #{rank}
