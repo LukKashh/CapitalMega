@@ -71,7 +71,7 @@ function corpView(c: CorpState | null, uid: string) {
   };
 }
 
-function corporationLeaderboardEntry(id: string, c: CorpState, now: number): CorpLeaderboardEntry {
+function corporationLeaderboardEntry(id: string, c: CorpState): CorpLeaderboardEntry {
   let upgradeSpend = 0;
   for (const [facilityId, level] of Object.entries(c.facilities || {})) {
     for (let i = 0; i < level; i++) upgradeSpend += facilityCost(facilityId, i);
@@ -135,7 +135,6 @@ async function run(
   if (action && !/^[A-Za-z0-9_-]{1,128}$/.test(_key)) {
     throw new Error("Invalid action idempotency key");
   }
-  const receiptRef = action ? doc(db, "player_action_receipts", uid, "actions", _key) : null;
   let lastErr: unknown;
   for (let attempt = 0; attempt < 4; attempt++) {
     const now = Date.now(); // server time is authoritative
@@ -249,15 +248,16 @@ async function run(
     try {
       const commit = await runTransaction(db, async (tx) => {
         const curSnap = await tx.get(playerRef);
-        const receiptSnap = receiptRef ? await tx.get(receiptRef) : null;
-        if (receiptSnap?.exists()) {
+        const currentData = curSnap.exists() ? curSnap.data() : null;
+        const recentActionKeys = (currentData?.recentActionKeys as string[] | undefined) ?? [];
+        if (action && recentActionKeys.includes(_key)) {
           return {
             duplicate: true as const,
-            state: (curSnap.exists() ? curSnap.data().state : state) as PlayerState,
+            state: (currentData?.state ?? state) as PlayerState,
           };
         }
         if (curSnap.exists()) {
-          const curVer = (curSnap.data().version as number) ?? 0;
+          const curVer = (currentData?.version as number) ?? 0;
           if (curVer !== version) {
             throw new Error("conflict: concurrent state change");
           }
@@ -314,6 +314,9 @@ async function run(
           version: version + 1,
           state: state as unknown as Record<string, unknown>,
           updatedAt: now,
+          recentActionKeys: action
+            ? [...recentActionKeys.filter((key) => key !== _key), _key].slice(-64)
+            : recentActionKeys.slice(-64),
         };
         tx.set(playerRef, playerRecord);
         // A deliberately small public projection replaces leaderboard reads of
@@ -344,7 +347,7 @@ async function run(
             updatedAt: now,
           });
           tx.set(doc(db, "public_corporations", corpOut.id), {
-            ...corporationLeaderboardEntry(corpOut.id, corpOut.state, now),
+            ...corporationLeaderboardEntry(corpOut.id, corpOut.state),
             dissolved: corpOut.dissolve,
           });
         }
@@ -369,13 +372,6 @@ async function run(
           tx.set(stockRefs[i]!, { itemId: item.id, sold: curSold + item.qty, updatedAt: now });
         }
 
-        if (receiptRef) {
-          tx.set(receiptRef, {
-            userId: uid,
-            actionType: action?.type ?? "unknown",
-            createdAt: now,
-          });
-        }
         return { duplicate: false as const, state };
       });
 
