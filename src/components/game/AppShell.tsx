@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { BankingView } from "./BankingView";
+import { BankingHub } from "./BankingHub";
 import { TaxView } from "./TaxView";
 import {
   Dialog,
@@ -315,19 +315,7 @@ export function AppShell() {
           </SheetContent>
         </Sheet>
 
-        <Dialog open={bankingOpen} onOpenChange={setBankingOpen}>
-          <DialogContent className="flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:gap-4 sm:p-5">
-            <DialogHeader className="shrink-0 pr-8 text-left">
-              <DialogTitle className="text-lg font-bold">Bank & Loans</DialogTitle>
-              <DialogDescription>
-                Manage banking institutions, accounts, payments, and loans.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="banking-view min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pr-1">
-              <BankingView />
-            </div>
-          </DialogContent>
-        </Dialog>
+        {bankingOpen && <BankingHub onClose={() => setBankingOpen(false)} />}
 
         {isDeveloper && (
           <DeveloperToolsDialog open={developerToolsOpen} onOpenChange={setDeveloperToolsOpen} />
