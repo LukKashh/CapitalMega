@@ -924,442 +924,54 @@ body {
 }
 
 
-/* Liquid Impact System — pointer-driven waves travel from every tap across the full surface. */
-.home-tap-surface {
-  isolation: isolate;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at 50% 46%, rgba(95, 62, 177, .22), transparent 56%),
-    linear-gradient(160deg, #111020 0%, #090b17 54%, #111022 100%);
+/* Lightweight tap feedback: fixed, compositor-friendly effects with no per-tap ripple layers. */
+.home-tap-medallion {
+  transition: transform 90ms ease-out, filter 90ms ease-out;
 }
-.home-liquid-base {
-  z-index: 0;
-  overflow: hidden;
-  opacity: .95;
-  background:
-    radial-gradient(ellipse at 18% 24%, rgba(105, 75, 210, .23), transparent 38%),
-    radial-gradient(ellipse at 78% 72%, rgba(26, 133, 173, .12), transparent 42%),
-    radial-gradient(ellipse at 52% 48%, rgba(142, 91, 226, .10), transparent 62%);
+.home-tap-surface:active .home-tap-medallion {
+  transform: scale(.94) translateY(1px);
+  filter: brightness(1.12);
 }
-.home-liquid-base::before,
-.home-liquid-base::after {
-  content: "";
-  position: absolute;
-  inset: -22%;
-  pointer-events: none;
-  border-radius: 44%;
+.home-tap-surface:active .home-tap-coin {
+  transform: scale(.98);
 }
-.home-liquid-base::before {
-  background:
-    radial-gradient(ellipse at 28% 36%, rgba(171, 140, 255, .15), transparent 28%),
-    radial-gradient(ellipse at 72% 58%, rgba(62, 190, 214, .10), transparent 31%),
-    radial-gradient(ellipse at 48% 78%, rgba(111, 75, 195, .13), transparent 26%);
-  filter: blur(22px);
-  animation: liquid-current-drift 11s ease-in-out infinite alternate;
-}
-.home-liquid-base::after {
-  inset: -5%;
-  border: 1px solid rgba(192, 173, 255, .055);
-  box-shadow: inset 0 0 70px rgba(113, 83, 205, .08), 0 0 55px rgba(70, 151, 192, .045);
-  animation: liquid-surface-breathe 7s ease-in-out infinite;
-}
-.home-liquid-grid {
-  z-index: 0;
-  opacity: .22;
-  background:
-    repeating-linear-gradient(0deg, transparent 0 27px, rgba(179, 158, 255, .07) 28px, transparent 29px),
-    repeating-linear-gradient(90deg, transparent 0 27px, rgba(179, 158, 255, .055) 28px, transparent 29px);
-  mask-image: radial-gradient(ellipse at center, #000 8%, rgba(0,0,0,.72) 62%, transparent 100%);
-  animation: liquid-grid-drift 16s linear infinite;
-}
-.home-liquid-ripple {
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  mix-blend-mode: screen;
-  contain: layout paint;
-}
-.home-liquid-ring {
-  position: absolute;
-  inset: 0;
-  display: block;
-  border-radius: 50%;
-  opacity: 0;
-  transform: scale(.015);
-  border: 1px solid rgba(208, 191, 255, .72);
-  box-shadow:
-    0 0 9px rgba(178, 151, 255, .42),
-    inset 0 0 16px rgba(146, 116, 255, .14);
-  animation: liquid-wave-travel var(--ripple-duration, 2200ms) cubic-bezier(.2,.48,.24,1) both;
-}
-.home-liquid-ring-a {
-  border-width: 2px;
-  border-color: rgba(225, 210, 255, .8);
-  animation-delay: 0ms;
-}
-.home-liquid-ring-b {
-  inset: 4%;
-  border-color: rgba(132, 211, 232, .58);
-  box-shadow: 0 0 14px rgba(84, 190, 219, .3), inset 0 0 18px rgba(84, 190, 219, .12);
-  animation-delay: 115ms;
-}
-.home-liquid-ring-c {
-  inset: 8%;
-  border-color: rgba(184, 150, 255, .48);
-  border-style: dashed;
-  animation-delay: 235ms;
-}
-.home-liquid-impact {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(246, 232, 255, .5) 0%, rgba(174, 145, 255, .22) 7%, rgba(100, 195, 226, .10) 19%, transparent 48%);
-  animation: liquid-impact-flash var(--ripple-duration, 1320ms) ease-out both;
-}
-.home-liquid-caustic {
-  position: absolute;
-  inset: 4%;
-  border-radius: 50%;
-  border: 1px solid rgba(190, 230, 255, .36);
-  box-shadow: inset 0 0 30px rgba(125, 189, 255, .12), 0 0 24px rgba(151, 116, 255, .18);
-  animation: liquid-caustic-sheen var(--ripple-duration, 1320ms) cubic-bezier(.2,.7,.2,1) both;
-}
-@keyframes liquid-current-drift {
-  0% { transform: translate3d(-2%, -1%, 0) rotate(-5deg) scale(.96); }
-  50% { transform: translate3d(2%, 1.5%, 0) rotate(3deg) scale(1.04); }
-  100% { transform: translate3d(-1%, 2%, 0) rotate(7deg) scale(1.02); }
-}
-@keyframes liquid-surface-breathe {
-  0%, 100% { transform: scale(.985) rotate(-1deg); opacity: .5; }
-  50% { transform: scale(1.015) rotate(1deg); opacity: .9; }
-}
-@keyframes liquid-grid-drift {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 28px 28px, -28px 28px; }
-}
-@keyframes liquid-wave-travel {
-  0% {
-    opacity: 0;
-    transform: scale(.015);
-    filter: blur(3px);
-    border-radius: 48% 52% 50% 50% / 50% 48% 52% 50%;
-  }
-  16% { opacity: .72; filter: blur(.35px); }
-  48% {
-    opacity: .48;
-    border-radius: 54% 46% 48% 52% / 46% 54% 51% 49%;
-  }
-  76% { opacity: .2; filter: blur(1.1px); }
-  100% {
-    opacity: 0;
-    transform: scale(1);
-    filter: blur(2.5px);
-    border-radius: 50%;
-  }
-}
-@keyframes liquid-impact-flash {
-  0% { opacity: 0; transform: scale(.05); }
-  12% { opacity: .62; }
-  42% { opacity: .28; transform: scale(.42); }
-  100% { opacity: 0; transform: scale(.82); }
-}
-@keyframes liquid-caustic-sheen {
-  0% { opacity: 0; transform: scale(.04) rotate(-12deg); }
-  18% { opacity: .5; }
-  62% { opacity: .24; transform: scale(.72) rotate(9deg); }
-  100% { opacity: 0; transform: scale(1) rotate(18deg); }
-}
-
-/* The reward coin now launches out of the water impact, with a short particle wake. */
 .home-tap-reward {
   transform: translate(-50%, -50%);
-  perspective: 420px;
+  pointer-events: none;
+  contain: layout paint;
 }
 .home-reward-coin {
   width: 2rem;
   height: 2rem;
-  transform-style: preserve-3d;
-  filter: drop-shadow(0 5px 9px rgba(0,0,0,.45));
-  animation: liquid-coin-launch var(--anim-duration, 980ms) cubic-bezier(.16,.72,.24,1) both;
-}
-/* A separate soft materialisation layer: the existing reward-flight path remains intact. */
-.home-reward-materialise {
-  transform-origin: center;
-  animation: coin-liquid-materialise 760ms cubic-bezier(.22,.58,.28,1) both;
-}
-@keyframes coin-liquid-materialise {
-  0% {
-    opacity: 0;
-    transform: scale(.42) rotateX(-28deg);
-    filter: blur(3px) brightness(1.55);
-  }
-  34% {
-    opacity: 1;
-    transform: scale(1.08) rotateX(8deg);
-    filter: blur(.35px) brightness(1.2);
-  }
-  68% {
-    opacity: .96;
-    transform: scale(.97) rotateX(-2deg);
-    filter: blur(0) brightness(1.06);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) rotateX(0);
-    filter: blur(0) brightness(1);
-  }
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.32));
+  animation: tap-reward-rise var(--anim-duration, 680ms) ease-out both;
 }
 .home-reward-coin img {
-  position: relative;
-  z-index: 2;
-  backface-visibility: hidden;
-  filter: drop-shadow(0 0 10px rgba(250,204,21,.72));
-}
-@keyframes liquid-coin-launch {
-  0% { opacity: 0; transform: translate3d(0, 12px, 0) rotateX(-68deg) rotateZ(-24deg) scale(.24); }
-  13% { opacity: 1; transform: translate3d(calc(var(--wave-x, 0px) * -.22), -7px, 0) rotateX(12deg) rotateZ(-8deg) scale(1.24); }
-  36% { opacity: 1; transform: translate3d(calc(var(--wave-x, 0px) * .65), calc(var(--drift-y, -80px) * .34), 0) rotateY(145deg) rotateZ(calc(var(--rot-end, 12deg) * .45)) scale(1.08); }
-  68% { opacity: .94; transform: translate3d(calc(var(--drift-x, 0px) * .72), calc(var(--drift-y, -80px) * .78), 0) rotateY(285deg) rotateZ(var(--rot-end, 12deg)) scale(.9); }
-  100% { opacity: 0; transform: translate3d(var(--drift-x, 0px), calc(var(--drift-y, -80px) * 1.12), 0) rotateY(390deg) rotateZ(calc(var(--rot-end, 12deg) + 12deg)) scale(.48); }
-}
-.home-reward-trail {
-  position: absolute;
-  z-index: 1;
-  left: 50%;
-  top: 50%;
-  width: 7px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(180deg, rgba(255,239,166,.78), rgba(250,204,21,.22), transparent);
-  filter: blur(3px);
-  transform: translate(-50%, -5%) scaleY(.15);
-  transform-origin: top;
-  animation: liquid-reward-trail var(--anim-duration, 980ms) ease-out both;
-}
-@keyframes liquid-reward-trail {
-  0%, 12% { opacity: 0; transform: translate(-50%, -5%) scaleY(.12); }
-  35% { opacity: .85; transform: translate(-50%, -5%) scaleY(1); }
-  100% { opacity: 0; transform: translate(-50%, -5%) scaleY(.3); }
-}
-.home-reward-particle {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: 50%;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #fff0a6;
-  box-shadow: 0 0 9px 2px rgba(250,204,21,.72);
-  animation: liquid-reward-spray var(--anim-duration, 980ms) cubic-bezier(.15,.7,.2,1) both;
-}
-.home-reward-particle-a { --particle-x: 17px; --particle-y: -19px; }
-.home-reward-particle-b { --particle-x: -18px; --particle-y: -12px; animation-delay: 35ms; }
-.home-reward-particle-c { --particle-x: 13px; --particle-y: 14px; animation-delay: 65ms; }
-.home-reward-particle-d { --particle-x: -13px; --particle-y: 18px; animation-delay: 90ms; }
-@keyframes liquid-reward-spray {
-  0%, 12% { opacity: 0; transform: translate(-50%, -50%) scale(.1); }
-  28% { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--particle-x)), calc(-50% + var(--particle-y))) scale(.15); }
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .float-cash-text {
   position: relative;
-  z-index: 4;
-  animation: liquid-cash-rise var(--anim-duration, 980ms) cubic-bezier(.18,.72,.25,1) both;
+  animation: tap-cash-rise var(--anim-duration, 680ms) ease-out both;
 }
-@keyframes liquid-cash-rise {
-  0% { opacity: 0; transform: translateY(10px) scale(.72); filter: blur(3px); }
-  16% { opacity: 1; transform: translateY(-3px) scale(1.12); filter: blur(0); }
-  42% { opacity: 1; transform: translateY(calc(var(--drift-y, -80px) * .28)) scale(1); }
-  100% { opacity: 0; transform: translateY(calc(var(--drift-y, -80px) * .82)) scale(.82); filter: blur(2px); }
+@keyframes tap-reward-rise {
+  0% { opacity: 0; transform: translate3d(0, 5px, 0) scale(.82); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--drift-x, 0px), var(--drift-y, -54px), 0) scale(1); }
+}
+@keyframes tap-cash-rise {
+  0% { opacity: 0; transform: translate3d(0, 5px, 0) scale(.92); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(0, -42px, 0) scale(1); }
 }
 @media (max-width: 420px) {
-  .home-liquid-ring { border-width: 1px; }
-  .home-liquid-grid { opacity: .16; }
   .home-reward-coin { width: 1.75rem; height: 1.75rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-liquid-base::before,
-  .home-liquid-base::after,
-  .home-liquid-grid,
-  .home-liquid-ring,
-  .home-liquid-impact,
-  .home-liquid-caustic,
   .home-reward-coin,
-  .home-reward-materialise,
-  .home-reward-trail,
-  .home-reward-particle,
   .float-cash-text {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-  }
-}
-
-
-/* Fluid surface refinement — broad organic displacement, edge rebound and low-cost rendering. */
-.home-liquid-ripple {
-  border-radius: 47% 53% 51% 49% / 52% 46% 54% 48%;
-  mix-blend-mode: screen;
-  contain: layout paint;
-  will-change: transform, opacity;
-}
-.home-liquid-ring {
-  inset: -1%;
-  border: 0;
-  border-radius: 48% 52% 49% 51% / 51% 47% 53% 49%;
-  opacity: 0;
-  background:
-    radial-gradient(ellipse at 50% 50%,
-      transparent 0 43%,
-      rgba(166, 139, 250, .025) 47%,
-      rgba(181, 224, 255, .19) 49%,
-      rgba(201, 184, 255, .42) 50%,
-      rgba(104, 190, 222, .16) 52%,
-      rgba(139, 92, 246, .035) 56%,
-      transparent 62%);
-  box-shadow: 0 0 22px rgba(160, 139, 250, .13);
-  animation: liquid-wave-rebound var(--ripple-duration, 3000ms) cubic-bezier(.2,.48,.24,1) both;
-}
-.home-liquid-ring-a {
-  background:
-    radial-gradient(ellipse at 50% 50%,
-      transparent 0 43%,
-      rgba(205, 191, 255, .025) 46%,
-      rgba(225, 215, 255, .26) 48.5%,
-      rgba(221, 240, 255, .54) 50%,
-      rgba(151, 217, 237, .22) 52%,
-      transparent 59%);
-}
-.home-liquid-ring-b {
-  inset: 3%;
-  background:
-    radial-gradient(ellipse at 50% 50%,
-      transparent 0 43%,
-      rgba(103, 211, 230, .025) 47%,
-      rgba(117, 210, 235, .25) 49%,
-      rgba(191, 235, 255, .34) 50%,
-      rgba(112, 173, 255, .13) 53%,
-      transparent 60%);
-  animation-delay: 180ms;
-}
-.home-liquid-ring-c {
-  inset: 7%;
-  border: 0;
-  background:
-    radial-gradient(ellipse at 50% 50%,
-      transparent 0 44%,
-      rgba(183, 158, 255, .02) 47%,
-      rgba(175, 155, 255, .25) 49%,
-      rgba(210, 197, 255, .32) 50%,
-      rgba(119, 198, 228, .10) 53%,
-      transparent 60%);
-  animation-delay: 360ms;
-}
-.home-liquid-impact {
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 50%,
-      rgba(225, 215, 255, .23) 0%,
-      rgba(165, 145, 255, .13) 8%,
-      rgba(92, 197, 224, .07) 23%,
-      transparent 54%);
-  filter: blur(5px);
-  animation: liquid-impact-spread var(--ripple-duration, 3000ms) ease-out both;
-}
-.home-liquid-caustic {
-  inset: 2%;
-  border: 0;
-  background:
-    radial-gradient(ellipse at 50% 50%,
-      transparent 0 39%,
-      rgba(174, 224, 255, .04) 45%,
-      rgba(186, 222, 255, .19) 49%,
-      rgba(184, 157, 255, .12) 52%,
-      transparent 60%);
-  box-shadow: inset 0 0 36px rgba(125, 189, 255, .10), 0 0 28px rgba(151, 116, 255, .12);
-  animation: liquid-edge-return var(--ripple-duration, 3000ms) cubic-bezier(.2,.7,.2,1) both;
-}
-@keyframes liquid-wave-rebound {
-  0% {
-    opacity: 0;
-    transform: scale(.015);
-    filter: blur(5px);
-    border-radius: 48% 52% 50% 50% / 50% 48% 52% 50%;
-  }
-  13% { opacity: .78; filter: blur(1.5px); }
-  48% {
-    opacity: .55;
-    transform: scale(.53);
-    filter: blur(.6px);
-    border-radius: 57% 43% 48% 52% / 45% 55% 49% 51%;
-  }
-  69% {
-    opacity: .3;
-    transform: scale(.83);
-    filter: blur(1.2px);
-    border-radius: 44% 56% 54% 46% / 55% 45% 53% 47%;
-  }
-  78% {
-    opacity: .25;
-    transform: scale(.88);
-    filter: blur(1.4px);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(.68);
-    filter: blur(4px);
-    border-radius: 50%;
-  }
-}
-@keyframes liquid-impact-spread {
-  0% { opacity: 0; transform: scale(.04); }
-  12% { opacity: .55; }
-  48% { opacity: .2; transform: scale(.48); }
-  76% { opacity: .12; transform: scale(.82); }
-  100% { opacity: 0; transform: scale(.66); }
-}
-@keyframes liquid-edge-return {
-  0% { opacity: 0; transform: scale(.04) rotate(-8deg); }
-  18% { opacity: .35; }
-  63% { opacity: .2; transform: scale(.78) rotate(5deg); }
-  79% { opacity: .22; transform: scale(.88) rotate(2deg); }
-  100% { opacity: 0; transform: scale(.7) rotate(-3deg); }
-}
-.home-reward-materialise {
-  animation: coin-liquid-materialise 900ms cubic-bezier(.2,.7,.22,1) both;
-  transform-origin: 50% 50%;
-}
-@keyframes coin-liquid-materialise {
-  0% {
-    opacity: 0;
-    transform: scale(.08) rotateX(72deg) rotateZ(-18deg);
-    filter: blur(6px) brightness(1.8);
-  }
-  24% {
-    opacity: .72;
-    transform: scale(.72) rotateX(24deg) rotateZ(8deg);
-    filter: blur(2px) brightness(1.45);
-  }
-  48% {
-    opacity: 1;
-    transform: scale(1.12) rotateX(-9deg) rotateZ(-4deg);
-    filter: blur(.35px) brightness(1.18);
-  }
-  72% {
-    opacity: .98;
-    transform: scale(.96) rotateX(3deg) rotateZ(1deg);
-    filter: blur(0) brightness(1.06);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) rotateX(0) rotateZ(0);
-    filter: blur(0) brightness(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .home-liquid-ripple,
-  .home-liquid-ring,
-  .home-liquid-impact,
-  .home-liquid-caustic {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
   }
