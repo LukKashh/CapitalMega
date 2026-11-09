@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/casino")({
 function CasinoPage() {
   const { data } = useGame();
   const [tableOpen, setTableOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<"Roulette" | "Blackjack" | "Mines" | "Keno" | "Hi-Lo">("Roulette");
   const navigate = useNavigate();
   if (!data) return <Loading />;
   if (tableOpen) return <div className="casino-table-shell pb-4">
@@ -25,7 +26,7 @@ function CasinoPage() {
       <button onClick={() => setTableOpen(false)} className="text-xs font-bold text-primary">← Casino lobby</button>
       <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Virtual chips only</span>
     </div>
-    <CasinoTable />
+    <CasinoTable initialGame={selectedGame} />
   </div>;
-  return <CasinoHub onClose={() => navigate({ to: "/home" })} onPlay={() => setTableOpen(true)} />;
+  return <CasinoHub onClose={() => navigate({ to: "/home" })} onPlay={(game) => { setSelectedGame(game); setTableOpen(true); }} />;
 }
