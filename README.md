@@ -27,6 +27,7 @@ This is a **web application**, not a native Android project or a website wrapper
 | Game rules and simulation | TypeScript modules in `src/game/` |
 | Game screens | `src/components/game/` and `src/routes/` |
 | Authentication and game persistence | Firebase Authentication and Cloud Firestore integration |
+| Public ranking reads | Lightweight Firestore projections in `public_players` and `public_corporations` |
 | Asset storage | Firebase Storage helpers and repository-hosted assets |
 | Database artifacts | Firestore rules/blueprint plus retained Drizzle migration files |
 
@@ -77,6 +78,12 @@ bun run test
 bun run lint
 bun run build
 ```
+
+## Public leaderboard projections
+
+The game maintains minimal `public_players` and `public_corporations` documents for ranking screens. Full player saves remain in `player_states` and are owner/admin readable only. Existing accounts and corporations populate their projection the next time they successfully synchronize or perform an action. Deploy updated Firestore rules alongside the application release; see [Internal Processing Update](docs/architecture/INTERNAL_PROCESSING_UPDATE.md).
+
+The current game action path still uses the Firebase client SDK. It is not yet a trusted server-authoritative command service; see the architecture baseline for the required hosting/runtime and secret-provisioning decisions.
 
 ## Configuration and secrets
 
