@@ -45,6 +45,7 @@ function HomePage() {
   const { openMenu } = useMenu();
   const [pops, setPops] = useState<PopItem[]>([]);
   const popId = useRef(0);
+  const lastRewardEffectAt = useRef(0);
   if (!data) return <Loading />;
   const s = data.state;
   const p = personalMods(s);
@@ -55,8 +56,6 @@ function HomePage() {
   const maxed = s.clicker.level >= BALANCE.clicker.hardCap;
   const shownCount = maxed ? 0 : Math.min(req, s.clicker.count + buffer);
   const xpPct = Math.min(100, ((s.xp + opt.xp) / xpForLevel(s.level)) * 100);
-
-  const lastRewardEffectAt = useRef(0);
 
   const createPop = (x: number, y: number): PopItem => {
     const id = ++popId.current;
