@@ -6,7 +6,6 @@ import {
   Code2,
   Globe,
   Monitor,
-  Search,
   ShieldCheck,
   UserRound,
   Users,
@@ -179,29 +178,6 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
     },
   ];
 
-  async function findPlayer() {
-    const term = lookup.trim();
-    if (!term) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    setPlayer(null);
-    try {
-      let uid = term;
-      if (!term.includes("@") && term.length <= 32 && !term.includes("/")) {
-        const usernameSnap = await getDoc(doc(db, "usernames", term.toLowerCase()));
-        if (usernameSnap.exists()) uid = String(usernameSnap.data().userId ?? term);
-      }
-      const playerSnap = await getDoc(doc(db, "player_states", uid));
-      if (!playerSnap.exists()) throw new Error("No player save was found for that username or Firebase UID.");
-      setPlayer(readPlayer(uid, playerSnap.data() as Record<string, unknown>));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to retrieve player data.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function applyAdjustment(confirmed = false) {
     if (!player || !user) return;
     const parsed = Number(amount);
@@ -319,6 +295,15 @@ export function DeveloperToolsDialog({ open, onOpenChange }: DeveloperToolsDialo
         version: result.version,
         state: result.state,
       });
+      setPlayers((currentPlayers) => currentPlayers.map((entry) => entry.uid === player.uid ? {
+        uid: player.uid,
+        username: result.state.username,
+        level: result.state.level,
+        xp: result.state.xp,
+        cash: result.state.cash,
+        version: result.version,
+        state: result.state,
+      } : entry));
       setAmount("");
       setNotice(`${operationLabels[kind]} completed. New wallet: ${result.state.cash.toLocaleString()} · Level ${result.state.level} · XP ${result.state.xp.toLocaleString()}.`);
     } catch (err) {
