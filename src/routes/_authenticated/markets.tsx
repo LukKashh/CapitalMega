@@ -174,7 +174,7 @@ function MarketsPage() {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="shrink-0 space-y-2 mb-2">
         {/* Centered Menu UI Header Text with Personal Balance Indicator */}
-        <div className="flex items-center justify-between gap-2 py-1 px-1">
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-card/70 px-3 py-2">
           <div className="flex-1 text-center">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
               Global Exchange HUB
@@ -198,7 +198,7 @@ function MarketsPage() {
 
         {/* Separate Pop-up Window Box over main game screen with Wallet contents & Order History */}
         <Dialog open={showPortfolio} onOpenChange={setShowPortfolio}>
-          <DialogContent className="max-w-md bg-card border-primary/45 p-5 max-h-[85vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-none bg-card border-primary/45 p-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain">
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center justify-between">
                 <span>Private Portfolio & Orders</span>
@@ -455,7 +455,7 @@ function MarketsPage() {
               <div
                 key={r.s.ticker}
                 onClick={() => setSelectedAsset({ market: "stock", sym: r.s.ticker })}
-                className="game-market-row flex cursor-pointer items-center justify-between gap-2 px-3 py-2"
+                className="game-market-row flex cursor-pointer items-center justify-between gap-2 px-3 py-3"
               >
                 <span className="game-market-monogram">{r.s.ticker.slice(0, 1)}</span>
                 <div className="min-w-0 flex-1">
@@ -535,7 +535,7 @@ function MarketsPage() {
 
       {/* Pop-up Window Dialog for inspecting specific stock or crypto listings */}
       <Dialog open={!!selectedAsset} onOpenChange={(o) => !o && setSelectedAsset(null)}>
-        <DialogContent className="max-w-lg bg-card border-primary/45 p-5 max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-none bg-card border-primary/45 p-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain">
           {selectedAsset && (
             <AssetInspectView
               market={selectedAsset.market}
