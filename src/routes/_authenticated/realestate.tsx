@@ -183,7 +183,7 @@ function RealEstatePage() {
                         Rent <span className="num font-semibold text-gain">{money(d.rent)}/h</span>
                       </span>
                       <span className="text-muted-foreground">
-                        Price <span className="num font-semibold text-foreground">{money(d.price)}</span>
+                        Price{" "}<span className="num font-semibold text-foreground">{money(d.price)}</span>
                       </span>
                     </div>
                   </div>
