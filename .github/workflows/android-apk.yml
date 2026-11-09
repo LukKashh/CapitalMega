@@ -1,20 +1,20 @@
-name: Android APK
+name: Android Offline APK
 
 on:
   workflow_dispatch:
   pull_request:
     branches: [main]
   push:
-    branches: [android/apk-cloud-build]
+    branches: [android/hybrid-local-engine]
 
 permissions:
   contents: read
 
 jobs:
   build-apk:
-    name: Build debug APK
+    name: Build and verify offline Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -26,15 +26,26 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
-      - name: Install dependencies
-        run: bun install
+      - name: Regenerate lockfile for the dependency migration
+        run: |
+          rm -f bun.lock
+          bun install
+
+      - name: Run game and local database tests
+        run: bun run test
+
+      - name: Run lint
+        run: bun run lint
 
       - name: Build web application
         run: bun run build
 
-      - name: Generate Android project and sync assets
+      - name: Verify built application has no online runtime dependencies
+        run: bun run verify:offline
+
+      - name: Generate Android project and sync native plugins
         run: |
           if [ ! -d android ]; then
             bunx cap add android
@@ -42,20 +53,14 @@ jobs:
           bunx cap sync android
           chmod +x android/gradlew
 
-      - name: Patch native Google sign-in activity
-        run: bash scripts/patch-android-google-login.sh
-
-      - name: Restore stable debug signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.config/.android/debug.keystore
-          key: capital-fortune-debug-keystore-v1
+      - name: Remove network permissions and disable system cloud backup
+        run: bash scripts/prepare-offline-android.sh
 
       - name: Compile debug APK
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace assembleDebug
 
-      - name: Verify APK contents and application identity
+      - name: Verify APK package, identity, and offline permissions
         shell: bash
         run: |
           set -euo pipefail
@@ -65,22 +70,15 @@ jobs:
           AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
           test -n "$AAPT"
           "$AAPT" dump badging "$APK" | grep -q "package: name='com.capitalfortune.app'"
-          DEX_LIST=$(unzip -Z1 "$APK" | grep -E '^classes[0-9]*\.dex$')
-          for CLASS in SocialLoginPlugin GoogleProvider; do
-            FOUND=0
-            while IFS= read -r DEX; do
-              if unzip -p "$APK" "$DEX" | strings | grep -q "$CLASS"; then
-                FOUND=1
-                break
-              fi
-            done <<< "$DEX_LIST"
-            if [ "$FOUND" -ne 1 ]; then
-              echo "Missing native Google class: $CLASS" >&2
-              exit 1
-            fi
-          done
+          "$AAPT" dump permissions "$APK" > apk-permissions.txt
+          if grep -Eq "android.permission.(INTERNET|ACCESS_NETWORK_STATE)" apk-permissions.txt; then
+            echo "APK still requests network permissions:" >&2
+            grep -E "android.permission.(INTERNET|ACCESS_NETWORK_STATE)" apk-permissions.txt >&2
+            exit 1
+          fi
+          echo "APK package identity and network-permission checks passed."
 
-      - name: Verify APK and capture signing certificate
+      - name: Verify APK signing certificate
         run: |
           test -s android/app/build/outputs/apk/debug/app-debug.apk
           cd android
@@ -88,12 +86,14 @@ jobs:
           cd ..
           grep -q 'SHA1:' signing-report.txt
 
-      - name: Upload APK and signing report
+      - name: Upload offline APK and verification evidence
         uses: actions/upload-artifact@v4
         with:
-          name: capital-fortune-debug-apk
+          name: capital-fortune-offline-apk
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
             signing-report.txt
+            apk-permissions.txt
+            bun.lock
           if-no-files-found: error
           retention-days: 14
