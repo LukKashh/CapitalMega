@@ -43,6 +43,10 @@ The inspected `src/lib/game.functions.ts` flow currently:
 5. Checks the player's version for optimistic concurrency.
 6. Writes player state, corporation state, ledger records, and collectible stock counters in that transaction.
 
+The game-action entry points are currently **ordinary imported functions**, not TanStack server functions. In particular, `src/hooks/use-game.tsx` imports and calls `getGame` and `gameAction` directly from `src/lib/game.functions.ts`; those functions use the browser Firebase client SDK. The global function middleware in `src/start.ts` applies to actual TanStack server-function calls and does not convert an ordinary imported function into a server endpoint. Therefore, the current gameplay action and persistence path is client-executed.
+
+The same distinction matters for authentication. `src/start.ts` installs `attachFirebaseAuth` as client function middleware, but that middleware is not currently protecting the direct game function calls. The separate `requireFirebaseAuth` middleware is not wired into `src/start.ts`. Neither should be treated as proof that the current game action path has trusted server-side authentication.
+
 The game domain logic is usefully separated from React presentation, but the orchestration and persistence boundary currently reside in a module that uses the client SDK. Firestore Security Rules are consequently part of the effective trust boundary.
 
 ## 4. Current provider responsibilities
@@ -87,11 +91,23 @@ The current corporation update conditions allow several membership/application/i
 
 ### 5.5 Token verification middleware
 
-`src/lib/firebase-auth-middleware.ts` extracts a user identifier by decoding a bearer token payload; decoding is not signature verification. Do not use this as proof of identity or authorization for privileged operations. Replace it with Firebase Admin SDK token verification (or an equivalent trusted verification mechanism) before relying on middleware-provided identity.
+At the reviewed revision this middleware is not connected to the game action path. It decodes bearer-token payloads without cryptographic signature verification, accepts a non-JWT bearer value as a UID, and falls back to the browser Firebase Auth singleton. Those behaviors do not establish trusted server identity. Separately, `src/lib/firebase-auth-attacher.ts` falls back to sending the raw UID as the bearer value when ID-token acquisition fails. Neither module is an authorization boundary. A trusted endpoint must verify a complete Firebase ID token on the server and reject missing, malformed, expired, or invalid tokens; the client must never substitute a UID for an ID token.
 
 ### 5.6 Casino secret fallback
 
 The casino seed helper in `src/lib/game.functions.ts` has a hard-coded fallback value when `CASINO_SECRET` is absent. A production secret must be supplied through server-only configuration and startup should fail closed if it is missing. This must be addressed as part of moving casino outcome generation to a trusted server boundary.
+
+### 5.7 Server runtime and deployment prerequisite
+
+The repository does not currently establish a production server runtime for privileged game commands:
+
+- `vite.config.ts` explicitly sets `nitro: false`.
+- `package.json` does not include `firebase-admin` or `firebase-functions`.
+- The checked-in GitHub Actions workflow validates, tests, lints, and builds; it does not deploy a trusted game server.
+- No production deployment manifest or server-secret provisioning configuration was found in the repository tree.
+- `src/server.ts` is an SSR fetch entry wrapper, while `scripts/prepare-dist.mjs` can fall back to writing static HTML. Their presence does not prove that production requests execute a server runtime with private credentials.
+
+Before implementing the privileged persistence adapter, explicitly identify the production host and its supported runtime (Node.js or edge), how server-only secrets are provisioned, and how the trusted endpoint is deployed. The choice between Firebase Admin SDK and an edge-compatible verified-token/persistence adapter depends on that runtime. Do not select one by assumption, and do not put service-account credentials or other private values into Vite/browser-exposed variables.
 
 ## 6. Target architecture boundaries
 
