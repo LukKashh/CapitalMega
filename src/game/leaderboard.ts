@@ -1,8 +1,4 @@
-import {
-  CORP_BUSINESSES,
-  CORP_DEPARTMENTS,
-  CORP_FACILITIES,
-} from "./config";
+import { CORP_BUSINESSES, CORP_DEPARTMENTS, CORP_FACILITIES } from "./config";
 import type { CorpState } from "./types";
 
 export type CorporationLeaderboardEntry = {
