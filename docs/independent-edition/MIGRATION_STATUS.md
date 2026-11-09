@@ -4,15 +4,18 @@
 - Extracted and inspected the uploaded archive (270 files, 40 directories) and identified the active runtime integrations.
 - Confirmed the source project is Capital Fortune, a wealth/business tycoon game.
 - Created branch `remix/supabase-android-independent` from `main`.
-- Selected the connected, empty Supabase project `CapitalfortuneViz` in `eu-central-1`.
+- Selected the connected Supabase project `CapitalfortuneViz` in `eu-central-1`.
 - Applied the backend foundation migration and a follow-up index migration.
-- Enabled RLS on all 11 exposed application tables; no client write policies are granted for game-critical records.
-- Checked Supabase security, performance and health advisors. Security and health have no findings. Performance reported an unindexed corporation founder FK; an index was added. Remaining unused-index notices are expected before the application starts querying those indexes.
+- Enabled RLS on all 11 application tables; game-critical tables have no client write policies.
+- Added a private, service-role-only Postgres commit primitive for player state, public leaderboard projection, ledger entries, collectible stock, corporation state, and idempotent action receipts. It serializes commands on the player row and checks the expected state version.
+- Verified the function exists, is executable by `service_role`, is not executable by `authenticated`, and the Supabase security advisor reports no findings.
 
 ## Not yet completed
+- The atomic commit primitive is database groundwork only; no Edge Function currently calls it.
 - Existing frontend still imports Firebase for authentication and game persistence.
 - Existing game command orchestration still runs client-side and must be ported to Edge Functions.
 - Supabase Auth screens, typed persistence adapter, Storage buckets/policies and seed data remain to be implemented.
+- Corporation membership/public projection synchronization and collectible stock seed data remain to be completed as part of the command migration.
 - Capacitor configuration, Android build, emulator/device verification and release signing remain outstanding.
 - The Android APK and a deployable web release have not been produced.
 
