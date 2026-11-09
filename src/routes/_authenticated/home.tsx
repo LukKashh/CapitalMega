@@ -105,7 +105,7 @@ function HomePage() {
               to="/profile"
               aria-label={`Account Manager & Profile - ${tierInfo.tierName} ${tierInfo.romanSublevel}`}
               title="Open Account Manager"
-              className="game-panel flex items-center gap-2 rounded-2xl border border-border/70 bg-card/85 px-2.5 py-1.5 backdrop-blur-md shadow-panel w-[195px] sm:w-[225px] shrink-0 overflow-hidden hover:border-primary/60 transition-all cursor-pointer group"
+              className="game-panel flex items-center gap-2 rounded-2xl border border-border/70 bg-card/85 px-2.5 py-1.5 backdrop-blur-md shadow-panel home-profile-card shrink-0 overflow-hidden hover:border-primary/60 transition-all cursor-pointer group"
             >
               <div className="relative shrink-0 flex items-center">
                 <div className="relative h-9 w-9 rounded-xl border border-primary-glow/70 bg-gradient-to-b from-primary/15 to-card/60 p-0.5 flex items-center justify-center shadow-[0_0_8px_rgba(139,92,246,0.35)] overflow-hidden transition-transform group-hover:scale-105">
@@ -146,7 +146,7 @@ function HomePage() {
 
         {/* Top Header Text */}
         <div className="flex flex-1 items-center justify-center px-2">
-          <span className="brand-name text-lg sm:text-2xl font-extrabold tracking-wider text-center select-none truncate drop-shadow-[0_0_12px_rgba(167,139,250,0.5)]">
+          <span className="brand-name home-brand text-lg sm:text-2xl font-extrabold tracking-wider text-center select-none truncate drop-shadow-[0_0_12px_rgba(167,139,250,0.5)]">
             Capital<span>fortune</span>
           </span>
         </div>
@@ -164,7 +164,7 @@ function HomePage() {
       </div>
 
       {/* Unified Clicker UI Container (Clickable Area + Bottom Status merged inside) */}
-      <div className="relative my-1 w-full flex-1 min-h-[260px] rounded-2xl border border-primary/35 bg-gradient-to-b from-card/70 via-surface/40 to-muted/60 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(167,139,250,0.25)] flex flex-col justify-between overflow-hidden">
+      <div className="home-clicker-frame relative my-1 w-full flex-1 min-h-[260px] rounded-2xl border border-primary/35 bg-gradient-to-b from-card/70 via-surface/40 to-muted/60 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(167,139,250,0.25)] flex flex-col justify-between overflow-hidden">
         {/* Interactive Clickable Area (Middle Prompt & Emoji removed) */}
         <div
           onPointerDown={handleFramePointerDown}
@@ -229,7 +229,7 @@ function HomePage() {
         </div>
 
         {/* Merged Bottom Section within Clicker UI Container */}
-        <div className="shrink-0 w-full border-t border-primary/20 bg-card/85 px-3 py-2 text-left backdrop-blur-md flex items-center justify-between gap-2 z-10">
+        <div className="home-clicker-footer shrink-0 w-full border-t border-primary/20 bg-card/85 px-3 py-2 text-left backdrop-blur-md flex items-center justify-between gap-2 z-10">
           {/* Cash-Tap Liquidity */}
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-xs font-semibold text-foreground tracking-wide truncate">
