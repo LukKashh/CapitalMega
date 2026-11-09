@@ -80,13 +80,9 @@ function corporationLeaderboardEntry(id: string, c: CorpState): CorpLeaderboardE
     const department = CORP_DEPARTMENTS.find((item) => item.id === departmentId);
     if (department) upgradeSpend += department.cost;
   }
-  let businessValuation = 0;
   for (const business of Object.values(c.businesses || {})) {
     const definition = CORP_BUSINESSES.find((item) => item.id === business.defId);
-    if (definition) {
-      upgradeSpend += definition.price;
-      businessValuation += definition.price;
-    }
+    if (definition) upgradeSpend += definition.price;
   }
   let totalShifts = 0;
   let totalContributions = 0;
@@ -105,8 +101,6 @@ function corporationLeaderboardEntry(id: string, c: CorpState): CorpLeaderboardE
       Math.floor(totalContributions / 1000) +
       (c.completedObjectives?.length || 0) * 50,
     valuation: upgradeSpend + (c.treasury || 0),
-    treasury: c.treasury || 0,
-    membersCount: Object.keys(c.members || {}).length,
   };
 }
 
@@ -326,9 +320,6 @@ async function run(
           username: playerRecord.username,
           level: playerRecord.level,
           netWorth: playerRecord.netWorth,
-          liquid: playerRecord.liquid,
-          title: playerRecord.title,
-          avatar: playerRecord.avatar,
           corpTag,
           corpId: state.corp.id || null,
           updatedAt: now,
@@ -501,15 +492,7 @@ export type LeaderboardEntry = {
   username: string;
   level: number;
   netWorth: number;
-  liquid: number;
-  title: string;
-  avatar: string;
   corpTag: string | null;
-  companiesCount: number;
-  propertiesCount: number;
-  achievementsCount: number;
-  updatedAt: number;
-  createdAt: number;
 };
 
 export async function getLeaderboard(sort: "networth" | "experience" = "networth"): Promise<LeaderboardEntry[]> {
@@ -527,15 +510,7 @@ export async function getLeaderboard(sort: "networth" | "experience" = "networth
         username: String(data.username || "Anonymous Tycoon"),
         level: Number(data.level || 1),
         netWorth: Math.max(0, Math.round(Number(data.netWorth) || 0)),
-        liquid: Number(data.liquid) || 0,
-        title: String(data.title || "Aspiring Tycoon"),
-        avatar: String(data.avatar || "briefcase"),
         corpTag: (data.corpTag as string | null) ?? null,
-        companiesCount: 0,
-        propertiesCount: 0,
-        achievementsCount: 0,
-        updatedAt: Number(data.updatedAt || 0),
-        createdAt: Number(data.createdAt || 0),
       };
     });
   } catch (err) {
@@ -551,8 +526,6 @@ export type CorpLeaderboardEntry = {
   xp: number;
   activity: number;
   valuation: number;
-  treasury: number;
-  membersCount: number;
 };
 
 export async function getCorporationLeaderboard(
@@ -580,8 +553,6 @@ export async function getCorporationLeaderboard(
         xp: Number(data.xp || 0),
         activity: Number(data.activity || 0),
         valuation: Number(data.valuation || 0),
-        treasury: Number(data.treasury || 0),
-        membersCount: Number(data.membersCount || 0),
       }));
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, "public_corporations");
