@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  collection, db, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, setDoc,
+  collection,
+  db,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  setDoc,
 } from "@/lib/local-firestore";
 
 describe("local SQLite document adapter", () => {
@@ -26,10 +35,12 @@ describe("local SQLite document adapter", () => {
     });
     expect((await getDoc(player)).data()).toEqual({ balance: 75 });
     expect((await getDoc(ledger)).exists()).toBe(true);
-    await expect(runTransaction(db, async (transaction) => {
-      transaction.set(player, { balance: 0 });
-      throw new Error("abort");
-    })).rejects.toThrow("abort");
+    await expect(
+      runTransaction(db, async (transaction) => {
+        transaction.set(player, { balance: 0 });
+        throw new Error("abort");
+      }),
+    ).rejects.toThrow("abort");
     expect((await getDoc(player)).data()).toEqual({ balance: 75 });
   });
 
@@ -37,7 +48,11 @@ describe("local SQLite document adapter", () => {
     await setDoc(doc(db, "ledger", "a"), { amount: 10 });
     await setDoc(doc(db, "ledger", "b"), { amount: 50 });
     await setDoc(doc(db, "ledger", "c"), { amount: 30 });
-    const result = await getDocs(query(collection(db, "ledger"), orderBy("amount", "desc"), limit(2)));
-    expect(result.docs.map((entry) => (entry.data() as { amount: number }).amount)).toEqual([50, 30]);
+    const result = await getDocs(
+      query(collection(db, "ledger"), orderBy("amount", "desc"), limit(2)),
+    );
+    expect(result.docs.map((entry) => (entry.data() as { amount: number }).amount)).toEqual([
+      50, 30,
+    ]);
   });
 });

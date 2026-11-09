@@ -1,5 +1,9 @@
 import { Capacitor } from "@capacitor/core";
-import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from "@capacitor-community/sqlite";
+import {
+  CapacitorSQLite,
+  SQLiteConnection,
+  type SQLiteDBConnection,
+} from "@capacitor-community/sqlite";
 
 export type LocalRecordWrite = { collection: string; id: string; value: unknown | null };
 const DATABASE_NAME = "capital_fortune_local";
@@ -25,9 +29,9 @@ async function getNativeDatabase(): Promise<SQLiteDBConnection> {
     await database.open();
     await database.execute(
       "CREATE TABLE IF NOT EXISTS local_records (" +
-      "collection_name TEXT NOT NULL, record_id TEXT NOT NULL, payload TEXT NOT NULL, " +
-      "updated_at INTEGER NOT NULL, PRIMARY KEY (collection_name, record_id));" +
-      "CREATE INDEX IF NOT EXISTS idx_local_records_collection ON local_records(collection_name);"
+        "collection_name TEXT NOT NULL, record_id TEXT NOT NULL, payload TEXT NOT NULL, " +
+        "updated_at INTEGER NOT NULL, PRIMARY KEY (collection_name, record_id));" +
+        "CREATE INDEX IF NOT EXISTS idx_local_records_collection ON local_records(collection_name);",
     );
     return database;
   })().catch((error) => {
@@ -37,22 +41,27 @@ async function getNativeDatabase(): Promise<SQLiteDBConnection> {
   return databasePromise;
 }
 
-export async function readLocalRecord<T = unknown>(collection: string, id: string): Promise<T | null> {
+export async function readLocalRecord<T = unknown>(
+  collection: string,
+  id: string,
+): Promise<T | null> {
   if (!Capacitor.isNativePlatform()) {
     if (typeof localStorage === "undefined") return null;
     const raw = localStorage.getItem(storageKey(collection, id));
-    return raw === null ? null : JSON.parse(raw) as T;
+    return raw === null ? null : (JSON.parse(raw) as T);
   }
   const database = await getNativeDatabase();
   const result = await database.query(
     "SELECT payload FROM local_records WHERE collection_name = ? AND record_id = ? LIMIT 1",
-    [collection, id]
+    [collection, id],
   );
   const raw = result.values?.[0]?.payload;
-  return typeof raw === "string" ? JSON.parse(raw) as T : null;
+  return typeof raw === "string" ? (JSON.parse(raw) as T) : null;
 }
 
-export async function listLocalRecords<T = unknown>(collection: string): Promise<{ id: string; value: T }[]> {
+export async function listLocalRecords<T = unknown>(
+  collection: string,
+): Promise<{ id: string; value: T }[]> {
   if (!Capacitor.isNativePlatform()) {
     if (typeof localStorage === "undefined") return [];
     const prefix = "capitalfortune:" + collection + ":";
@@ -68,7 +77,7 @@ export async function listLocalRecords<T = unknown>(collection: string): Promise
   const database = await getNativeDatabase();
   const result = await database.query(
     "SELECT record_id, payload FROM local_records WHERE collection_name = ?",
-    [collection]
+    [collection],
   );
   return (result.values ?? []).map((row) => ({
     id: String(row.record_id),
@@ -79,7 +88,8 @@ export async function listLocalRecords<T = unknown>(collection: string): Promise
 export async function writeLocalRecords(writes: LocalRecordWrite[]): Promise<void> {
   if (writes.length === 0) return;
   if (!Capacitor.isNativePlatform()) {
-    if (typeof localStorage === "undefined") throw new Error("Local storage is unavailable in this runtime.");
+    if (typeof localStorage === "undefined")
+      throw new Error("Local storage is unavailable in this runtime.");
     for (const write of writes) {
       const key = storageKey(write.collection, write.id);
       if (write.value === null) localStorage.removeItem(key);
@@ -92,17 +102,24 @@ export async function writeLocalRecords(writes: LocalRecordWrite[]): Promise<voi
   try {
     for (const write of writes) {
       if (write.value === null) {
-        await database.run("DELETE FROM local_records WHERE collection_name = ? AND record_id = ?", [write.collection, write.id]);
+        await database.run(
+          "DELETE FROM local_records WHERE collection_name = ? AND record_id = ?",
+          [write.collection, write.id],
+        );
       } else {
         await database.run(
           "INSERT OR REPLACE INTO local_records (collection_name, record_id, payload, updated_at) VALUES (?, ?, ?, ?)",
-          [write.collection, write.id, JSON.stringify(write.value), Date.now()]
+          [write.collection, write.id, JSON.stringify(write.value), Date.now()],
         );
       }
     }
     await database.execute("COMMIT;");
   } catch (error) {
-    try { await database.execute("ROLLBACK;"); } catch { /* Keep original error. */ }
+    try {
+      await database.execute("ROLLBACK;");
+    } catch {
+      /* Keep original error. */
+    }
     throw error;
   }
 }

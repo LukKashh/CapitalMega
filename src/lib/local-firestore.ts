@@ -1,15 +1,32 @@
-import { listLocalRecords, readLocalRecord, writeLocalRecords, type LocalRecordWrite } from "@/lib/local-store";
+import {
+  listLocalRecords,
+  readLocalRecord,
+  writeLocalRecords,
+  type LocalRecordWrite,
+} from "@/lib/local-store";
 
-export type DocumentReference = { readonly kind: "document"; readonly collection: string; readonly id: string };
+export type DocumentReference = {
+  readonly kind: "document";
+  readonly collection: string;
+  readonly id: string;
+};
 export type CollectionReference = { readonly kind: "collection"; readonly collection: string };
 type QueryConstraint =
-  | { type: "orderBy"; field: string; direction: "asc" | "desc" }
-  | { type: "limit"; count: number };
-type QueryReference = { readonly kind: "query"; readonly collection: string; readonly constraints: QueryConstraint[] };
+  { type: "orderBy"; field: string; direction: "asc" | "desc" } | { type: "limit"; count: number };
+type QueryReference = {
+  readonly kind: "query";
+  readonly collection: string;
+  readonly constraints: QueryConstraint[];
+};
 
 export const db = Object.freeze({ engine: "capitalfortune-local-sqlite" });
 export enum OperationType {
-  CREATE = "create", UPDATE = "update", DELETE = "delete", LIST = "list", GET = "get", WRITE = "write",
+  CREATE = "create",
+  UPDATE = "update",
+  DELETE = "delete",
+  LIST = "list",
+  GET = "get",
+  WRITE = "write",
 }
 export function doc(_database: typeof db, collectionName: string, id: string): DocumentReference {
   return { kind: "document", collection: collectionName, id };
@@ -23,7 +40,10 @@ export function orderBy(field: string, direction: "asc" | "desc" = "asc"): Query
 export function limit(count: number): QueryConstraint {
   return { type: "limit", count: Math.max(0, Math.floor(count)) };
 }
-export function query(source: CollectionReference, ...constraints: QueryConstraint[]): QueryReference {
+export function query(
+  source: CollectionReference,
+  ...constraints: QueryConstraint[]
+): QueryReference {
   return { kind: "query", collection: source.collection, constraints };
 }
 function snapshot(id: string, value: unknown | null) {
@@ -41,8 +61,10 @@ export async function getDocs(source: CollectionReference | QueryReference) {
       filtered = [...filtered].sort((left, right) => {
         const a = (left.value as Record<string, unknown>)[sorter.field];
         const b = (right.value as Record<string, unknown>)[sorter.field];
-        const comparison = typeof a === "number" && typeof b === "number"
-          ? a - b : String(a ?? "").localeCompare(String(b ?? ""));
+        const comparison =
+          typeof a === "number" && typeof b === "number"
+            ? a - b
+            : String(a ?? "").localeCompare(String(b ?? ""));
         return sorter.direction === "desc" ? -comparison : comparison;
       });
     }
@@ -52,7 +74,10 @@ export async function getDocs(source: CollectionReference | QueryReference) {
   const docs = filtered.map((record) => snapshot(record.id, record.value));
   return { docs, size: docs.length, empty: docs.length === 0 };
 }
-export async function setDoc(reference: DocumentReference, value: Record<string, unknown>): Promise<void> {
+export async function setDoc(
+  reference: DocumentReference,
+  value: Record<string, unknown>,
+): Promise<void> {
   await writeLocalRecords([{ collection: reference.collection, id: reference.id, value }]);
 }
 
@@ -64,18 +89,22 @@ type LocalTransaction = {
 let transactionQueue: Promise<void> = Promise.resolve();
 export async function runTransaction<T>(
   _database: typeof db,
-  callback: (transaction: LocalTransaction) => Promise<T>
+  callback: (transaction: LocalTransaction) => Promise<T>,
 ): Promise<T> {
   const previous = transactionQueue;
   let release = () => {};
-  transactionQueue = new Promise<void>((resolve) => { release = resolve; });
+  transactionQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
   await previous;
   try {
     const writes: LocalRecordWrite[] = [];
     const transaction: LocalTransaction = {
       get: async (reference) => getDoc(reference),
-      set: (reference, value) => writes.push({ collection: reference.collection, id: reference.id, value }),
-      delete: (reference) => writes.push({ collection: reference.collection, id: reference.id, value: null }),
+      set: (reference, value) =>
+        writes.push({ collection: reference.collection, id: reference.id, value }),
+      delete: (reference) =>
+        writes.push({ collection: reference.collection, id: reference.id, value: null }),
     };
     const result = await callback(transaction);
     await writeLocalRecords(writes);
@@ -84,7 +113,11 @@ export async function runTransaction<T>(
     release();
   }
 }
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+export function handleFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null,
+): never {
   const message = error instanceof Error ? error.message : String(error);
   console.error("Local database error:", { message, operationType, path });
   throw new Error("Local save operation failed: " + message);

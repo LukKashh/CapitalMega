@@ -10,11 +10,16 @@ function LocalGameEntry() {
   useEffect(() => {
     let active = true;
     void getCurrentUser()
-      .then(() => { if (active) navigate({ to: "/home", replace: true }); })
+      .then(() => {
+        if (active) navigate({ to: "/home", replace: true });
+      })
       .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : "Unable to open the local save.");
+        if (active)
+          setError(reason instanceof Error ? reason.message : "Unable to open the local save.");
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
   return (
@@ -25,7 +30,11 @@ function LocalGameEntry() {
         <p className="mt-2 text-sm text-muted-foreground">
           Opening the save stored on this device. No account or internet connection is required.
         </p>
-        {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
+        {error && (
+          <p role="alert" className="mt-4 text-sm text-destructive">
+            {error}
+          </p>
+        )}
       </div>
     </main>
   );

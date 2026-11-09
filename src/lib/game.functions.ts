@@ -1,5 +1,17 @@
 import { getCurrentUser } from "@/lib/local-auth";
-import { db, handleFirestoreError, OperationType, doc, getDoc, getDocs, collection, query, orderBy, limit, runTransaction } from "@/lib/local-firestore";
+import {
+  db,
+  handleFirestoreError,
+  OperationType,
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  query,
+  orderBy,
+  limit,
+  runTransaction,
+} from "@/lib/local-firestore";
 import {
   apply,
   newPlayer,
@@ -368,7 +380,8 @@ export async function getGame() {
 export async function gameAction(input: { data: { key: string; action: AnyAction } }) {
   const user = await getCurrentUser();
   if (!input || !input.data || typeof input.data.key !== "string") throw new Error("Bad key");
-  if (!input.data.action || typeof input.data.action.type !== "string") throw new Error("Bad action");
+  if (!input.data.action || typeof input.data.action.type !== "string")
+    throw new Error("Bad action");
   const r = await run(user.uid, undefined, input.data.action, `a-${input.data.key}`);
   return JSON.parse(JSON.stringify(r)) as typeof r;
 }

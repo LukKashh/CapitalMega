@@ -34,7 +34,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-
   return (
     <main className="entry-screen relative flex min-h-[100svh] flex-col overflow-hidden text-white">
       <img src={art("entry-city")} alt="" aria-hidden="true" className="entry-backdrop" />

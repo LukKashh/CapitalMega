@@ -26,18 +26,28 @@ export async function getCurrentUser(): Promise<LocalUser> {
     await writeLocalRecords([{ collection: "device", id: "identity", value: identity }]);
   }
   const user: LocalUser = {
-    uid: identity.uid, email: null, emailVerified: false, isAnonymous: true, displayName: "Local Player",
+    uid: identity.uid,
+    email: null,
+    emailVerified: false,
+    isAnonymous: true,
+    displayName: "Local Player",
   };
   auth.currentUser = user;
   return user;
 }
-export async function loginAsGuest() { return getCurrentUser(); }
+export async function loginAsGuest() {
+  return getCurrentUser();
+}
 export async function logOut() {
   // Keep the local identity stable so the same on-device save resumes.
   return;
 }
 export function onAuthStateChanged(_auth: typeof auth, callback: (user: LocalUser | null) => void) {
   let active = true;
-  void getCurrentUser().then((user) => { if (active) callback(user); });
-  return () => { active = false; };
+  void getCurrentUser().then((user) => {
+    if (active) callback(user);
+  });
+  return () => {
+    active = false;
+  };
 }
