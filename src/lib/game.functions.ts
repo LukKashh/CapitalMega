@@ -234,6 +234,18 @@ async function run(
         const usernameSnap = usernameRef ? await tx.get(usernameRef) : null;
         const stockRefs = ctx.stock.map((s) => doc(db, "collectible_stock", s.id));
         const stockSnaps = await Promise.all(stockRefs.map((ref) => tx.get(ref)));
+        const corpRef = corpOut ? doc(db, "corporations", corpOut.id) : null;
+        const corpSnap = corpRef ? await tx.get(corpRef) : null;
+
+        if (corpOut && corpSnap) {
+          const currentCorpVersion = corpSnap.exists()
+            ? ((corpSnap.data().version as number) ?? 0)
+            : null;
+          const isNewCorporation = !corpSnap.exists() && corpOut.version === 0;
+          if (!isNewCorporation && currentCorpVersion !== corpOut.version) {
+            throw new Error("conflict: concurrent corporation state change");
+          }
+        }
 
         // Validate limited-edition stock before writes begin.
         for (let i = 0; i < ctx.stock.length; i++) {
@@ -294,8 +306,7 @@ async function run(
           updatedAt: now,
         });
 
-        if (corpOut) {
-          const corpRef = doc(db, "corporations", corpOut.id);
+        if (corpOut && corpRef) {
           tx.set(corpRef, {
             id: corpOut.id,
             name: corpOut.state.name,
