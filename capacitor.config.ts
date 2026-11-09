@@ -5,6 +5,11 @@ const config: CapacitorConfig = {
   appName: "Capital Fortune",
   webDir: "dist",
   server: { androidScheme: "https" },
+  plugins: {
+    SocialLogin: {
+      providers: { google: true },
+    },
+  },
 };
 
 export default config;
