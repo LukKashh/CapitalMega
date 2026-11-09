@@ -129,7 +129,14 @@ export type PlayerState = {
       createdAt: number;
       transactions: {
         id: string;
-        type: "deposit" | "withdrawal" | "loan" | "repayment" | "tax" | "business_income" | "property_income";
+        type:
+          | "deposit"
+          | "withdrawal"
+          | "loan"
+          | "repayment"
+          | "tax"
+          | "business_income"
+          | "property_income";
         amount: number;
         at: number;
       }[];
@@ -236,7 +243,12 @@ export type BankAction =
   | { type: "registerBank"; bankId: string }
   | { type: "deposit"; bankId: string; amount: number }
   | { type: "withdraw"; bankId: string; amount: number }
-  | { type: "applyLoan"; bankId: string; amount: number; category?: "personal" | "business" | "real-estate" }
+  | {
+      type: "applyLoan";
+      bankId: string;
+      amount: number;
+      category?: "personal" | "business" | "real-estate";
+    }
   | { type: "repayLoan"; bankId: string; loanId: string; amount: number }
   | { type: "linkBusinessIncome"; inst: string; bankId: string | null }
   | { type: "linkPropertyIncome"; inst: string; bankId: string | null }

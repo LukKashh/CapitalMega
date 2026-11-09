@@ -555,7 +555,9 @@ function simulateCompanies(
         hours,
         amount: net,
         eligible: d.offlineEligible,
-        note: note || (incomeDeposited ? "Deposited to linked bank account" : "Added to business wallet"),
+        note:
+          note ||
+          (incomeDeposited ? "Deposited to linked bank account" : "Added to business wallet"),
       });
   }
   if (autoIncome > 0)
@@ -1774,8 +1776,7 @@ function applyBank(c: Ctx, a: BankAction) {
       if (c.s.cash < payAmount) throw new GameError("Insufficient cash to repay loan");
 
       // Repay accrued interest before reducing principal.
-      const accruedInterest =
-        loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
+      const accruedInterest = loan.accruedInterest ?? Math.max(0, loan.remaining - loan.principal);
       const principalRemaining =
         loan.principalRemaining ?? Math.max(0, loan.remaining - accruedInterest);
       const interestPaid = Math.min(payAmount, accruedInterest);
@@ -1804,7 +1805,8 @@ function applyBank(c: Ctx, a: BankAction) {
       if (!company) throw new GameError("Business not found");
       if (a.bankId !== null) {
         const bank = BANK_BY_ID[a.bankId];
-        if (!bank || !c.s.bankAccounts[a.bankId]) throw new GameError("Active bank account required");
+        if (!bank || !c.s.bankAccounts[a.bankId])
+          throw new GameError("Active bank account required");
         if (bank.category !== "Wide-scale" && bank.category !== "Business-finance")
           throw new GameError("This bank does not support business income linking");
       }
@@ -1816,7 +1818,8 @@ function applyBank(c: Ctx, a: BankAction) {
       if (!property) throw new GameError("Property not found");
       if (a.bankId !== null) {
         const bank = BANK_BY_ID[a.bankId];
-        if (!bank || !c.s.bankAccounts[a.bankId]) throw new GameError("Active bank account required");
+        if (!bank || !c.s.bankAccounts[a.bankId])
+          throw new GameError("Active bank account required");
         if (bank.category !== "Wide-scale" && bank.category !== "Real-estate")
           throw new GameError("This bank does not support property income linking");
       }

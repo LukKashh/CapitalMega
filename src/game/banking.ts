@@ -262,8 +262,7 @@ export function getTotalActiveDebt(state: PlayerState, now = state.lastTick): nu
     const debt = (account.loans || [])
       .filter((loan) => loan.status === "active")
       .reduce(
-        (loanSum, loan) =>
-          loanSum + loan.remaining * Math.pow(1 + loan.interestRate, elapsedDays),
+        (loanSum, loan) => loanSum + loan.remaining * Math.pow(1 + loan.interestRate, elapsedDays),
         0,
       );
     return sum + debt;

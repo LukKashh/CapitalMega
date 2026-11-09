@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { apply, newPlayer, tick, netWorth, checkAchievements, type Ctx } from "./engine";
 import { BANKS, BANK_BY_ID, calculateBankCreditLimit, getActiveDebt } from "./banking";
 import { EMPTY_MODS } from "./config";
+import { ACHIEVEMENTS } from "./achievements";
 
 describe("Banking Feature Logic", () => {
   const baseTime = 1700000000000;
@@ -75,6 +76,7 @@ describe("Banking Feature Logic", () => {
 
   it("routes collected business and property income into the linked bank account", () => {
     const s = newPlayer(baseTime, "IncomeTycoon");
+    for (const a of ACHIEVEMENTS) s.achievements[a.id] = { at: baseTime };
     const c = createCtx(s);
     apply(c, { type: "registerBank", bankId: "BNK-001" });
     s.companies.company_1 = {
@@ -108,6 +110,7 @@ describe("Banking Feature Logic", () => {
       uncollected: 3_000,
     };
 
+    s.cash = 0;
     apply(c, { type: "linkBusinessIncome", inst: "company_1", bankId: "BNK-001" });
     apply(c, { type: "linkPropertyIncome", inst: "property_1", bankId: "BNK-001" });
     apply(c, { type: "collect" });
@@ -121,6 +124,7 @@ describe("Banking Feature Logic", () => {
 
   it("deposits newly generated property income directly into its linked bank", () => {
     const s = newPlayer(baseTime);
+    for (const a of ACHIEVEMENTS) s.achievements[a.id] = { at: baseTime };
     const c = createCtx(s);
     apply(c, { type: "registerBank", bankId: "BNK-001" });
     s.companies.company_1 = {
@@ -156,6 +160,7 @@ describe("Banking Feature Logic", () => {
       incomeBankId: "BNK-001",
     };
 
+    s.cash = 0;
     tick(createCtx(s, baseTime + 3_600_000));
 
     expect(s.bankAccounts["BNK-001"].balance).toBeGreaterThan(0);
