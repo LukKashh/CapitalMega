@@ -41,7 +41,7 @@ function bankBrand(bankId: string) {
   };
 }
 
-export function BankingView() {
+export function BankingView({ bankFilterId }: { bankFilterId?: string } = {}) {
   const { data } = useGame();
   const { run, pending } = useAct();
   const now = useNow(data?.offset ?? 0);
@@ -61,8 +61,8 @@ export function BankingView() {
 
   if (!data) return null;
   const s = data.state;
-  const registeredBankIds = Object.keys(accounts);
-  const allActiveLoans = Object.entries(accounts).flatMap(([bankId, account]) =>
+  const registeredBankIds = Object.keys(accounts).filter((id) => !bankFilterId || id === bankFilterId);
+  const allActiveLoans = Object.entries(accounts).filter(([bankId]) => !bankFilterId || bankId === bankFilterId).flatMap(([bankId, account]) =>
     (account.loans || [])
       .filter((loan) => loan.status === "active")
       .map((loan) => {
@@ -92,7 +92,7 @@ export function BankingView() {
     "Real-estate",
     "Business-finance",
   ];
-  const filteredBanks = BANKS.filter((b) => selectedCat === "All" || b.category === selectedCat);
+  const filteredBanks = BANKS.filter((b) => (!bankFilterId || b.id === bankFilterId) && (selectedCat === "All" || b.category === selectedCat));
   const totalBankReserves = registeredBankIds.reduce(
     (total, bankId) => total + (accounts[bankId]?.balance || 0),
     0,
@@ -274,7 +274,7 @@ export function BankingView() {
           aria-label="Banking sections"
           className="flex min-w-0 gap-2 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0 md:self-start"
         >
-          {bankingSections.map((section) => {
+          {visibleSections.map((section) => {
             const Icon = section.icon;
             const active = bankAppTab === section.id;
             return (
