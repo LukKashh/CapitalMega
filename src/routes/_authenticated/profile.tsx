@@ -7,12 +7,12 @@ export const Route = createFileRoute("/_authenticated/profile")({
       { title: "Account Manager — Capitalfortune" },
       {
         name: "description",
-        content: "Account manager, profile settings, achievements, and banking panel.",
+        content: "Account management, profile settings, and achievements.",
       },
       { property: "og:title", content: "Account Manager — Capitalfortune" },
       {
         property: "og:description",
-        content: "Account manager, profile settings, achievements, and banking panel.",
+        content: "Account management, profile settings, and achievements.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
