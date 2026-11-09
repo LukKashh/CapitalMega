@@ -608,11 +608,16 @@ export function BankingView() {
                               </div>
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-sm font-black text-foreground">{bankDef.name}</span>
+                                  <span className="text-sm font-black text-foreground">
+                                    {bankDef.name}
+                                  </span>
                                   <Pill tone="gain" className="py-0 text-[8px] font-bold uppercase">
                                     Active
                                   </Pill>
-                                  <Pill tone="neutral" className="py-0 text-[9px] font-bold uppercase">
+                                  <Pill
+                                    tone="neutral"
+                                    className="py-0 text-[9px] font-bold uppercase"
+                                  >
                                     {bankDef.category}
                                   </Pill>
                                 </div>
@@ -636,14 +641,16 @@ export function BankingView() {
                           {/* Expanded Banking Operations Desk */}
                           {isSelected && (
                             <div className="p-4 pt-2 border-t border-border/80 space-y-5 bg-muted/10">
-                              {(bankAppTab === "payments") && (
+                              {bankAppTab === "payments" && (
                                 <div className="space-y-3">
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                                      <Wallet className="h-3.5 w-3.5 text-primary" /> Cash Management Desk
+                                      <Wallet className="h-3.5 w-3.5 text-primary" /> Cash
+                                      Management Desk
                                     </span>
                                     <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-mono">
-                                      <ShieldCheck className="h-3 w-3 text-gain" /> Instant 24/7 Liquidity
+                                      <ShieldCheck className="h-3 w-3 text-gain" /> Instant 24/7
+                                      Liquidity
                                     </span>
                                   </div>
 
@@ -721,7 +728,7 @@ export function BankingView() {
                                 </div>
                               )}
 
-                              {(bankAppTab === "loans") && (
+                              {bankAppTab === "loans" && (
                                 <div className="space-y-3 border-t border-border/80 pt-4">
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
@@ -761,7 +768,9 @@ export function BankingView() {
                                     </div>
                                     <div className="flex justify-between text-[11px] font-bold border-t border-border/40 pt-1.5">
                                       <span className="text-foreground">Available to Borrow:</span>
-                                      <span className="num text-primary">{money(availableCredit)}</span>
+                                      <span className="num text-primary">
+                                        {money(availableCredit)}
+                                      </span>
                                     </div>
                                   </div>
 
@@ -879,8 +888,8 @@ export function BankingView() {
                                               {(loan.category ?? "personal").replace("-", " ")} loan
                                               &bull; Principal outstanding:{" "}
                                               {money(loan.currentPrincipalRemaining)} &bull; Accrued
-                                              interest: {money(loan.currentAccruedInterest)} &bull; APR:{" "}
-                                              {(loan.interestRate * 365 * 100).toFixed(1)}%
+                                              interest: {money(loan.currentAccruedInterest)} &bull;
+                                              APR: {(loan.interestRate * 365 * 100).toFixed(1)}%
                                             </div>
                                           </div>
                                           <Button
@@ -910,20 +919,22 @@ export function BankingView() {
                                 </div>
                               )}
 
-                              {(bankAppTab === "services") &&
-                                (supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
+                              {bankAppTab === "services" &&
+                                (supportsBusinessIncome(bankDef) ||
+                                  supportsPropertyIncome(bankDef)) && (
                                   <div className="space-y-3 border-t border-border/80 pt-4">
                                     <div>
                                       <div className="text-xs font-black uppercase tracking-wider text-foreground">
                                         Income Integrations
                                       </div>
                                       <p className="mt-1 text-[10px] text-muted-foreground">
-                                        Route newly generated income from eligible assets directly into
+                                        Route newly generated income from eligible assets directly
                                         this bank account. Previously accrued wallet balances can still be
                                         collected here.
                                       </p>
                                     </div>
-                                    {supportsBusinessIncome(bankDef) && ownedBusinesses.length > 0 && (
+                                    {supportsBusinessIncome(bankDef) &&
+                                      ownedBusinesses.length > 0 && (
                                         <div className="space-y-2">
                                           <div className="text-[10px] font-bold uppercase text-muted-foreground">
                                             Business Income
@@ -970,7 +981,8 @@ export function BankingView() {
                                           ))}
                                         </div>
                                       )}
-                                    {supportsPropertyIncome(bankDef) && ownedProperties.length > 0 && (
+                                    {supportsPropertyIncome(bankDef) &&
+                                      ownedProperties.length > 0 && (
                                         <div className="space-y-2">
                                           <div className="text-[10px] font-bold uppercase text-muted-foreground">
                                             Real Estate Income
@@ -1021,7 +1033,7 @@ export function BankingView() {
                                 )}
 
                               {/* Sub-panel 3: Institutional Audit Log */}
-                              {(bankAppTab === "activity") &&
+                              {bankAppTab === "activity" &&
                                 acc.transactions &&
                                 acc.transactions.length > 0 && (
                                   <div className="space-y-2 border-t border-border/80 pt-4">
@@ -1080,7 +1092,9 @@ export function BankingView() {
                                                   : "text-foreground",
                                               )}
                                             >
-                                              {tx.type === "deposit" || tx.type === "loan" ? "+" : "-"}
+                                              {tx.type === "deposit" || tx.type === "loan"
+                                                ? "+"
+                                                : "-"}
                                               {money(tx.amount)}
                                             </span>
                                           </div>
@@ -1200,7 +1214,8 @@ export function BankingView() {
                                 </div>
                               </div>
                             </div>
-      
+                          </div>
+
                           {/* Institutional Perk */}
                           <div className="flex items-center gap-1.5 text-[10px] text-amber-400 bg-amber-500/10 px-2.5 py-1.5 rounded-md border border-amber-500/20">
                             <Sparkles className="h-3 w-3 shrink-0" />
