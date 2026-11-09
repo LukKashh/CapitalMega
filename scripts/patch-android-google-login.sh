@@ -30,7 +30,7 @@ if "ModifiedMainActivityForSocialLoginPlugin" in source and "handleGoogleLoginIn
 
 for item in required:
     if item not in source:
-        source = source.replace("import com.getcapacitor.BridgeActivity;", item + "\\nimport com.getcapacitor.BridgeActivity;")
+        source = source.replace("import com.getcapacitor.BridgeActivity;", item + "\nimport com.getcapacitor.BridgeActivity;")
 
 source = source.replace(
     "public class MainActivity extends BridgeActivity {",
