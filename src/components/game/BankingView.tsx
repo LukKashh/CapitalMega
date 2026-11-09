@@ -553,7 +553,7 @@ export function BankingView() {
                     {registeredBankIds.length} of {MAX_ACTIVE_BANK_ACCOUNTS} accounts active
                   </span>
                 </div>
-      
+
                 <div className="grid gap-3">
                   {[activeAccountTab]
                     .filter((bankId): bankId is string => !!bankId)
@@ -565,7 +565,7 @@ export function BankingView() {
                       const isSelected = activeAccountTab === bankId;
                       const parsedAmt = parseFloat(amountInput) || 0;
                       const parsedLoanAmt = parseFloat(loanAmountInput) || 0;
-      
+
                       const activeLoans = (acc.loans || []).filter((l) => l.status === "active");
                       const currentDebt = activeLoans.reduce((sum, loan) => {
                         const elapsedDays = Math.max(0, now - s.lastTick) / 86400000;
@@ -574,10 +574,10 @@ export function BankingView() {
                       }, 0);
                       const bankCreditLimit = calculateBankCreditLimit(bankDef, s, now);
                       const availableCredit = getAvailableBankCredit(bankDef, s, now);
-      
+
                       const ownedBusinesses = Object.values(s.companies || {});
                       const ownedProperties = Object.values(s.properties || {});
-      
+
                       return (
                         <Card
                           key={bankId}
@@ -632,7 +632,7 @@ export function BankingView() {
                               </div>
                             </div>
                           </div>
-      
+
                           {/* Expanded Banking Operations Desk */}
                           {isSelected && (
                             <div className="p-4 pt-2 border-t border-border/80 space-y-5 bg-muted/10">
@@ -646,7 +646,7 @@ export function BankingView() {
                                       <ShieldCheck className="h-3 w-3 text-gain" /> Instant 24/7 Liquidity
                                     </span>
                                   </div>
-      
+
                                   <div className="flex gap-2">
                                     <Input
                                       type="number"
@@ -685,7 +685,7 @@ export function BankingView() {
                                       Withdraw
                                     </Button>
                                   </div>
-      
+
                                   {/* Quick Preset Buttons */}
                                   <div className="flex gap-1.5 flex-wrap">
                                     {[1_000, 10_000, 50_000, 250_000].map((preset) => (
@@ -720,7 +720,7 @@ export function BankingView() {
                                   </div>
                                 </div>
                               )}
-      
+
                               {(bankAppTab === "loans") && (
                                 <div className="space-y-3 border-t border-border/80 pt-4">
                                   <div className="flex items-center justify-between">
@@ -732,7 +732,7 @@ export function BankingView() {
                                       Borrowing APR: {(bankDef.loanApr * 100).toFixed(1)}%
                                     </span>
                                   </div>
-      
+
                                   {/* Credit Line Status Bar */}
                                   <div className="p-3 rounded-xl bg-card border border-border/70 space-y-2">
                                     <div className="flex justify-between text-[11px]">
@@ -764,7 +764,7 @@ export function BankingView() {
                                       <span className="num text-primary">{money(availableCredit)}</span>
                                     </div>
                                   </div>
-      
+
                                   {/* Apply for Loan / Draw Credit */}
                                   {availableCredit > 0 && (
                                     <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-2.5">
@@ -776,7 +776,7 @@ export function BankingView() {
                                           Instant disbursement
                                         </span>
                                       </div>
-      
+
                                       <div className="grid grid-cols-1 gap-2">
                                         <label className="space-y-1">
                                           <span className="text-[10px] font-bold uppercase text-muted-foreground">
@@ -831,7 +831,7 @@ export function BankingView() {
                                           Draw Credit
                                         </Button>
                                       </div>
-      
+
                                       {/* Percentage Quick Taps */}
                                       <div className="flex gap-1.5">
                                         {[0.25, 0.5, 0.75, 1.0].map((pct) => {
@@ -851,7 +851,7 @@ export function BankingView() {
                                       </div>
                                     </div>
                                   )}
-      
+
                                   {/* Consolidated Loan Portfolio */}
                                   {allActiveLoans.length > 0 && (
                                     <div className="space-y-2">
@@ -909,7 +909,7 @@ export function BankingView() {
                                   )}
                                 </div>
                               )}
-      
+
                               {(bankAppTab === "services") &&
                                 (supportsBusinessIncome(bankDef) || supportsPropertyIncome(bankDef)) && (
                                   <div className="space-y-3 border-t border-border/80 pt-4">
@@ -924,102 +924,102 @@ export function BankingView() {
                                       </p>
                                     </div>
                                     {supportsBusinessIncome(bankDef) && ownedBusinesses.length > 0 && (
-                                      <div className="space-y-2">
-                                        <div className="text-[10px] font-bold uppercase text-muted-foreground">
-                                          Business Income
-                                        </div>
-                                        {ownedBusinesses.map((company) => (
-                                          <label
-                                            key={company.inst}
-                                            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5"
-                                          >
-                                            <span className="min-w-0 truncate text-[11px] font-semibold">
-                                              {company.inst}
-                                            </span>
-                                            <select
-                                              className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
-                                              value={company.incomeBankId ?? ""}
-                                              onChange={(event) => {
-                                                const bankId = event.target.value || null;
-                                                void run(
-                                                  {
-                                                    type: "linkBusinessIncome",
-                                                    inst: company.inst,
-                                                    bankId,
-                                                  },
-                                                  bankId
-                                                    ? "Business income linked to bank account"
-                                                    : "Business income unlinked",
-                                                );
-                                              }}
-                                              disabled={pending}
+                                        <div className="space-y-2">
+                                          <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                                            Business Income
+                                          </div>
+                                          {ownedBusinesses.map((company) => (
+                                            <label
+                                              key={company.inst}
+                                              className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5"
                                             >
-                                              <option value="">Temporary business wallet</option>
-                                              {company.incomeBankId &&
-                                                company.incomeBankId !== bankId && (
-                                                  <option value={company.incomeBankId}>
-                                                    {BANK_BY_ID[company.incomeBankId]?.name ??
-                                                      company.incomeBankId}
-                                                  </option>
-                                                )}
-                                              <option value={bankId}>
-                                                This account — {bankDef.name}
-                                              </option>
-                                            </select>
-                                          </label>
-                                        ))}
-                                      </div>
-                                    )}
+                                              <span className="min-w-0 truncate text-[11px] font-semibold">
+                                                {company.inst}
+                                              </span>
+                                              <select
+                                                className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
+                                                value={company.incomeBankId ?? ""}
+                                                onChange={(event) => {
+                                                  const bankId = event.target.value || null;
+                                                  void run(
+                                                    {
+                                                      type: "linkBusinessIncome",
+                                                      inst: company.inst,
+                                                      bankId,
+                                                    },
+                                                    bankId
+                                                      ? "Business income linked to bank account"
+                                                      : "Business income unlinked",
+                                                  );
+                                                }}
+                                                disabled={pending}
+                                              >
+                                                <option value="">Temporary business wallet</option>
+                                                {company.incomeBankId &&
+                                                  company.incomeBankId !== bankId && (
+                                                    <option value={company.incomeBankId}>
+                                                      {BANK_BY_ID[company.incomeBankId]?.name ??
+                                                        company.incomeBankId}
+                                                    </option>
+                                                  )}
+                                                <option value={bankId}>
+                                                  This account — {bankDef.name}
+                                                </option>
+                                              </select>
+                                            </label>
+                                          ))}
+                                        </div>
+                                      )}
                                     {supportsPropertyIncome(bankDef) && ownedProperties.length > 0 && (
-                                      <div className="space-y-2">
-                                        <div className="text-[10px] font-bold uppercase text-muted-foreground">
-                                          Real Estate Income
-                                        </div>
-                                        {ownedProperties.map((property) => (
-                                          <label
-                                            key={property.inst}
-                                            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5"
-                                          >
-                                            <span className="min-w-0 truncate text-[11px] font-semibold">
-                                              {property.inst}
-                                            </span>
-                                            <select
-                                              className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
-                                              value={property.incomeBankId ?? ""}
-                                              onChange={(event) => {
-                                                const bankId = event.target.value || null;
-                                                void run(
-                                                  {
-                                                    type: "linkPropertyIncome",
-                                                    inst: property.inst,
-                                                    bankId,
-                                                  },
-                                                  bankId
-                                                    ? "Property income linked to bank account"
-                                                    : "Property income unlinked",
-                                                );
-                                              }}
-                                              disabled={pending}
+                                        <div className="space-y-2">
+                                          <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                                            Real Estate Income
+                                          </div>
+                                          {ownedProperties.map((property) => (
+                                            <label
+                                              key={property.inst}
+                                              className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-2.5"
                                             >
-                                              <option value="">Temporary property wallet</option>
-                                              {property.incomeBankId &&
-                                                property.incomeBankId !== bankId && (
-                                                  <option value={property.incomeBankId}>
-                                                    {BANK_BY_ID[property.incomeBankId]?.name ??
-                                                      property.incomeBankId}
-                                                  </option>
-                                                )}
-                                              <option value={bankId}>
-                                                This account — {bankDef.name}
-                                              </option>
-                                            </select>
-                                          </label>
-                                        ))}
-                                      </div>
-                                    )}
+                                              <span className="min-w-0 truncate text-[11px] font-semibold">
+                                                {property.inst}
+                                              </span>
+                                              <select
+                                                className="max-w-[58%] rounded-md border border-border bg-background px-2 py-1.5 text-[10px]"
+                                                value={property.incomeBankId ?? ""}
+                                                onChange={(event) => {
+                                                  const bankId = event.target.value || null;
+                                                  void run(
+                                                    {
+                                                      type: "linkPropertyIncome",
+                                                      inst: property.inst,
+                                                      bankId,
+                                                    },
+                                                    bankId
+                                                      ? "Property income linked to bank account"
+                                                      : "Property income unlinked",
+                                                  );
+                                                }}
+                                                disabled={pending}
+                                              >
+                                                <option value="">Temporary property wallet</option>
+                                                {property.incomeBankId &&
+                                                  property.incomeBankId !== bankId && (
+                                                    <option value={property.incomeBankId}>
+                                                      {BANK_BY_ID[property.incomeBankId]?.name ??
+                                                        property.incomeBankId}
+                                                    </option>
+                                                  )}
+                                                <option value={bankId}>
+                                                  This account — {bankDef.name}
+                                                </option>
+                                              </select>
+                                            </label>
+                                          ))}
+                                        </div>
+                                      )}
                                   </div>
                                 )}
-      
+
                               {/* Sub-panel 3: Institutional Audit Log */}
                               {(bankAppTab === "activity") &&
                                 acc.transactions &&
@@ -1033,7 +1033,7 @@ export function BankingView() {
                                         Last {Math.min(acc.transactions.length, 10)} records
                                       </span>
                                     </div>
-      
+
                                     <div className="max-h-40 overflow-y-auto space-y-1.5 scrollbar-thin">
                                       {acc.transactions
                                         .slice(-10)
@@ -1071,7 +1071,7 @@ export function BankingView() {
                                                 </div>
                                               </div>
                                             </div>
-      
+
                                             <span
                                               className={cn(
                                                 "num font-black text-xs",
@@ -1096,153 +1096,153 @@ export function BankingView() {
                 </div>
               </div>
             )}
-      
-                {bankAppTab === "institutions" && (
+
+          {bankAppTab === "institutions" && (
+            <div className="space-y-4">
+              {/* Institutions Catalogue (12 Banks) */}
               <div className="space-y-4">
-                {/* Institutions Catalogue (12 Banks) */}
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                        <Landmark className="h-4 w-4 text-primary" /> Banking Institutions Directory
-                      </h4>
-                      <span className="text-[11px] text-muted-foreground">12 Financial Centers</span>
-                    </div>
-                    <div className="h-0.5 w-14 bg-primary/50" />
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                      <Landmark className="h-4 w-4 text-primary" /> Banking Institutions Directory
+                    </h4>
+                    <span className="text-[11px] text-muted-foreground">12 Financial Centers</span>
                   </div>
-      
-                  {/* Category Filter Chips */}
-                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCat(cat)}
+                  <div className="h-0.5 w-14 bg-primary/50" />
+                </div>
+
+                {/* Category Filter Chips */}
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCat(cat)}
+                      className={cn(
+                        "text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all whitespace-nowrap",
+                        selectedCat === cat
+                          ? "bg-primary text-primary-foreground border-primary shadow-glow"
+                          : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50",
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Bank Grid */}
+                <div className="grid gap-3.5 sm:grid-cols-2">
+                  {filteredBanks.map((bank) => {
+                    const isRegistered = registeredBankIds.includes(bank.id);
+                    const estCredit = calculateBankCreditLimit(bank, s, now);
+
+                    return (
+                      <Card
+                        key={bank.id}
                         className={cn(
-                          "text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all whitespace-nowrap",
-                          selectedCat === cat
-                            ? "bg-primary text-primary-foreground border-primary shadow-glow"
-                            : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50",
+                          "flex flex-col justify-between p-4.5 space-y-3.5 border transition-all duration-200 group",
+                          isRegistered
+                            ? "border-gain/40 bg-card/90"
+                            : "border-border/80 hover:border-primary/60 bg-card/75",
                         )}
                       >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-      
-                  {/* Bank Grid */}
-                  <div className="grid gap-3.5 sm:grid-cols-2">
-                    {filteredBanks.map((bank) => {
-                      const isRegistered = registeredBankIds.includes(bank.id);
-                      const estCredit = calculateBankCreditLimit(bank, s, now);
-      
-                      return (
-                        <Card
-                          key={bank.id}
-                          className={cn(
-                            "flex flex-col justify-between p-4.5 space-y-3.5 border transition-all duration-200 group",
-                            isRegistered
-                              ? "border-gain/40 bg-card/90"
-                              : "border-border/80 hover:border-primary/60 bg-card/75",
-                          )}
-                        >
-                          <div className="space-y-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2.5">
-                                <div className="h-9 w-9 rounded-xl border border-border/60 bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                  <Building className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                  <span className="font-black text-sm text-foreground tracking-tight group-hover:text-primary transition-colors block">
-                                    {bank.name}
-                                  </span>
-                                  <span className="text-[10px] font-mono text-muted-foreground/70">
-                                    {bank.id} &bull; {bank.category}
-                                  </span>
-                                </div>
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-9 w-9 rounded-xl border border-border/60 bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <Building className="h-4 w-4 text-primary" />
                               </div>
-      
-                              <Pill
-                                tone={isRegistered ? "gain" : "neutral"}
-                                className="text-[9px] uppercase font-bold py-0.5 px-2"
-                              >
-                                {isRegistered ? "ACTIVE" : "AVAILABLE"}
-                              </Pill>
+                              <div>
+                                <span className="font-black text-sm text-foreground tracking-tight group-hover:text-primary transition-colors block">
+                                  {bank.name}
+                                </span>
+                                <span className="text-[10px] font-mono text-muted-foreground/70">
+                                  {bank.id} &bull; {bank.category}
+                                </span>
+                              </div>
                             </div>
-      
-                            <p className="text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
-                              {bank.description}
-                            </p>
-      
-                            {/* Financial Stats Bar */}
-                            <div className="grid grid-cols-3 gap-2 py-2 px-2.5 rounded-lg bg-muted/40 border border-border/50 text-center">
-                              <div>
-                                <div className="text-[9px] uppercase font-bold text-muted-foreground">
-                                  Borrow APR
-                                </div>
-                                <div className="text-xs font-black text-loss num mt-0.5">
-                                  {(bank.loanApr * 100).toFixed(1)}%
-                                </div>
+
+                            <Pill
+                              tone={isRegistered ? "gain" : "neutral"}
+                              className="text-[9px] uppercase font-bold py-0.5 px-2"
+                            >
+                              {isRegistered ? "ACTIVE" : "AVAILABLE"}
+                            </Pill>
+                          </div>
+
+                          <p className="text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
+                            {bank.description}
+                          </p>
+
+                          {/* Financial Stats Bar */}
+                          <div className="grid grid-cols-3 gap-2 py-2 px-2.5 rounded-lg bg-muted/40 border border-border/50 text-center">
+                            <div>
+                              <div className="text-[9px] uppercase font-bold text-muted-foreground">
+                                Borrow APR
                               </div>
-                              <div>
-                                <div className="text-[9px] uppercase font-bold text-muted-foreground">
-                                  Savings APY
-                                </div>
-                                <div className="text-xs font-black text-gain num mt-0.5">
-                                  {(bank.savingsApy * 100).toFixed(1)}%
-                                </div>
+                              <div className="text-xs font-black text-loss num mt-0.5">
+                                {(bank.loanApr * 100).toFixed(1)}%
                               </div>
-                              <div>
-                                <div className="text-[9px] uppercase font-bold text-muted-foreground">
-                                  Credit Line
-                                </div>
-                                <div className="text-xs font-black text-primary num mt-0.5">
+                            </div>
+                            <div>
+                              <div className="text-[9px] uppercase font-bold text-muted-foreground">
+                                Savings APY
+                              </div>
+                              <div className="text-xs font-black text-gain num mt-0.5">
+                                {(bank.savingsApy * 100).toFixed(1)}%
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[9px] uppercase font-bold text-muted-foreground">
+                                Credit Line
+                              </div>
+                              <div className="text-xs font-black text-primary num mt-0.5">
                                   {money(estCredit)}
                                 </div>
                               </div>
                             </div>
       
-                            {/* Institutional Perk */}
-                            <div className="flex items-center gap-1.5 text-[10px] text-amber-400 bg-amber-500/10 px-2.5 py-1.5 rounded-md border border-amber-500/20">
-                              <Sparkles className="h-3 w-3 shrink-0" />
-                              <span className="font-bold truncate">{bank.perkTitle}:</span>
-                              <span className="text-muted-foreground truncate">
-                                {bank.perkDescription}
-                              </span>
-                            </div>
-                          </div>
-      
-                          <div className="pt-2 border-t border-border/50 flex justify-between items-center">
-                            <span className="text-[10px] font-mono text-muted-foreground">
-                              Max Ceiling: {money(bank.maxCredit)}
+                          {/* Institutional Perk */}
+                          <div className="flex items-center gap-1.5 text-[10px] text-amber-400 bg-amber-500/10 px-2.5 py-1.5 rounded-md border border-amber-500/20">
+                            <Sparkles className="h-3 w-3 shrink-0" />
+                            <span className="font-bold truncate">{bank.perkTitle}:</span>
+                            <span className="text-muted-foreground truncate">
+                              {bank.perkDescription}
                             </span>
-                            {isRegistered ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 text-[10px] font-black uppercase tracking-wider border-gain/40 text-gain hover:bg-gain hover:text-gain-foreground gap-1"
-                                onClick={() => {
-                                  setRegistering(bank.id);
-                                  window.scrollTo({ top: 0, behavior: "smooth" });
-                                }}
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Open Bank App
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                className="h-8 text-[10px] font-black uppercase tracking-widest bg-gradient-primary text-white hover:opacity-95 shadow-md"
-                                onClick={() => setRegistering(bank.id)}
-                              >
-                                Open Account
-                              </Button>
-                            )}
                           </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-border/50 flex justify-between items-center">
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            Max Ceiling: {money(bank.maxCredit)}
+                          </span>
+                          {isRegistered ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-[10px] font-black uppercase tracking-wider border-gain/40 text-gain hover:bg-gain hover:text-gain-foreground gap-1"
+                              onClick={() => {
+                                setRegistering(bank.id);
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                              }}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Open Bank App
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="h-8 text-[10px] font-black uppercase tracking-widest bg-gradient-primary text-white hover:opacity-95 shadow-md"
+                              onClick={() => setRegistering(bank.id)}
+                            >
+                              Open Account
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
                 </div>
-        </div>
+              </div>
+            </div>
           )}
         </main>
       </div>
