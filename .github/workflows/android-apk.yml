@@ -50,34 +50,25 @@ jobs:
         run: ./gradlew --no-daemon --stacktrace assembleDebug
 
       - name: Verify APK contents and application identity
+        shell: bash
         run: |
+          set -euo pipefail
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
           test -n "$AAPT"
           "$AAPT" dump badging "$APK" | grep -q "package: name='com.capitalfortune.app'"
+          DEX_LIST=$(unzip -Z1 "$APK" | grep -E '^classes[0-9]*\.dex$')
           for CLASS in SocialLoginPlugin GoogleProvider; do
-            if ! unzip -Z1 "$APK" | grep -E '^classes[0-9]*\\.dex
-
-      - name: Verify APK and capture signing certificate
-        run: |
-          test -s android/app/build/outputs/apk/debug/app-debug.apk
-          cd android
-          ./gradlew --no-daemon signingReport > ../signing-report.txt
-          cd ..
-          grep -q 'SHA1:' signing-report.txt
-
-      - name: Upload APK and signing report
-        uses: actions/upload-artifact@v4
-        with:
-          name: capital-fortune-debug-apk
-          path: |
-            android/app/build/outputs/apk/debug/app-debug.apk
-            signing-report.txt
-          if-no-files-found: error
-          retention-days: 14
- | while read -r DEX; do unzip -p "$APK" "$DEX" | strings; done | grep -q "$CLASS"; then
+            FOUND=0
+            while IFS= read -r DEX; do
+              if unzip -p "$APK" "$DEX" | strings | grep -q "$CLASS"; then
+                FOUND=1
+                break
+              fi
+            done <<< "$DEX_LIST"
+            if [ "$FOUND" -ne 1 ]; then
               echo "Missing native Google class: $CLASS" >&2
               exit 1
             fi
