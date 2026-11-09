@@ -44,3 +44,37 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
+
+  android-build:
+    needs: web-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        run: corepack enable && pnpm install --no-frozen-lockfile
+      - name: Build web assets
+        run: pnpm build
+      - name: Generate Android project
+        run: pnpm exec cap add android
+      - name: Sync Capacitor
+        run: pnpm exec cap sync android
+      - name: Build debug APK
+        run: cd android && ./gradlew assembleDebug
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: capital-fortune-android-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
