@@ -52,7 +52,7 @@ export function AccountManagerMenu({ onClose }: { onClose?: () => void }) {
     );
   }
 
-  // Initial Account Manager State (Main view with H1 heading and 3 navigation options only)
+  // Account Manager home contains profile and achievement navigation only.
   return (
     <div className="space-y-6 py-2">
       <div className="space-y-1">
