@@ -57,8 +57,31 @@ jobs:
           AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
           test -n "$AAPT"
           "$AAPT" dump badging "$APK" | grep -q "package: name='com.capitalfortune.app'"
-          unzip -p "$APK" classes.dex | strings | grep -q 'SocialLoginPlugin'
-          unzip -p "$APK" classes.dex | strings | grep -q 'GoogleProvider'
+          for CLASS in SocialLoginPlugin GoogleProvider; do
+            if ! unzip -Z1 "$APK" | grep -E '^classes[0-9]*\\.dex
+
+      - name: Verify APK and capture signing certificate
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          cd android
+          ./gradlew --no-daemon signingReport > ../signing-report.txt
+          cd ..
+          grep -q 'SHA1:' signing-report.txt
+
+      - name: Upload APK and signing report
+        uses: actions/upload-artifact@v4
+        with:
+          name: capital-fortune-debug-apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            signing-report.txt
+          if-no-files-found: error
+          retention-days: 14
+ | while read -r DEX; do unzip -p "$APK" "$DEX" | strings; done | grep -q "$CLASS"; then
+              echo "Missing native Google class: $CLASS" >&2
+              exit 1
+            fi
+          done
 
       - name: Verify APK and capture signing certificate
         run: |
