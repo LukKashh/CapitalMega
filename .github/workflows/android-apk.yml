@@ -49,6 +49,17 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace assembleDebug
 
+      - name: Verify APK contents and application identity
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
+          test -n "$AAPT"
+          "$AAPT" dump badging "$APK" | grep -q "package: name='com.capitalfortune.app'"
+          unzip -p "$APK" classes.dex | strings | grep -q 'SocialLoginPlugin'
+          unzip -p "$APK" classes.dex | strings | grep -q 'GoogleProvider'
+
       - name: Verify APK and capture signing certificate
         run: |
           test -s android/app/build/outputs/apk/debug/app-debug.apk
