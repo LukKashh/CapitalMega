@@ -125,7 +125,9 @@ export async function signInWithGoogle() {
     const idToken = response.result?.idToken;
 
     if (!idToken) {
-      throw new Error("Google sign-in did not return an ID token. Check the Android OAuth client configuration.");
+      throw new Error(
+        "Google sign-in did not return an ID token. Check the Android OAuth client configuration.",
+      );
     }
 
     const credential = GoogleAuthProvider.credential(idToken);
