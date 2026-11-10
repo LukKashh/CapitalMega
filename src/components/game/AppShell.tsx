@@ -22,6 +22,7 @@ import {
   Landmark,
   Receipt,
   Code2,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGame, useAct } from "@/hooks/use-game";
@@ -41,22 +42,24 @@ import { Button } from "@/components/ui/button";
 import { Loading } from "./ui";
 import { OfflineReportDialog } from "./OfflineReport";
 import { checkDeveloperAccess, DeveloperToolsDialog } from "./DeveloperTools";
+import { money } from "@/lib/format";
 
 const NAV = [
-  { to: "/realestate", label: "Assets", icon: Gem, also: ["/collectibles"] },
-  { to: "/markets", label: "Trade-HUB", icon: LineChart },
-  { to: "/home", label: "Tap", icon: Home, center: true },
-  { to: "/empire", label: "Empire", icon: Building2 },
-  { to: "/stats", label: "Stats", icon: BarChart3 },
+  { to: "/home", label: "Home", icon: Home },
+  { to: "/markets", label: "Market", icon: LineChart },
+  { to: "/profile", label: "Profile", icon: User },
 ] as const;
 
 const MORE = [
-  { to: "/leaderboard", label: "Online Leaderboard", icon: Trophy },
+  { to: "/empire", label: "Business Empire", icon: Building2 },
+  { to: "/realestate", label: "Real Estate", icon: Gem },
+  { to: "/collectibles", label: "Collectibles", icon: Briefcase },
+  { to: "/corporation", label: "Corporations", icon: Users },
+  { to: "/leaderboard", label: "Leaderboards", icon: Trophy },
   { to: "/casino", label: "Casino", icon: Dices },
   { to: "/research", label: "Research & Development", icon: FlaskConical },
   { to: "/achievements", label: "Achievements", icon: Award },
   { to: "/stats", label: "Statistics & Net Worth", icon: BarChart3 },
-  { to: "/profile", label: "Private Profile & Settings", icon: User },
 ] as const;
 
 export function AppShell() {
@@ -114,51 +117,73 @@ export function AppShell() {
   return (
     <MenuContext.Provider value={{ openMenu: () => setMenu(true) }}>
       <div className="game-shell h-screen overflow-hidden flex flex-col bg-background text-foreground">
-        <main className="game-content mx-auto w-full max-w-[430px] flex-1 overflow-x-hidden overflow-y-auto px-3.5 pb-14 pt-2 flex flex-col min-h-0">
+        {!path.startsWith("/home") && (
+          <header className="game-topbar shrink-0">
+            <div className="game-topbar-inner">
+              <div className="min-w-0">
+                <div className="game-topbar-brand">CAPITAL<span>FORTUNE</span></div>
+                <div className="game-topbar-meta">{s.username || "Tycoon"} · LEVEL {s.level}</div>
+              </div>
+              <div className="game-topbar-cash">
+                <span>AVAILABLE CASH</span>
+                <strong className="num">{money(s.cash)}</strong>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Open navigation"
+                onClick={() => setMenu(true)}
+                className="game-topbar-menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
+          </header>
+        )}
+
+        <main className="game-content mx-auto w-full max-w-[430px] flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-4 pb-24 pt-3 flex flex-col">
           <Outlet />
         </main>
 
-        <nav className="game-nav fixed inset-x-0 bottom-0 z-30 border-t border-[#942929] bg-background/95 backdrop-blur pb-safe">
-          <div className="game-nav-inner mx-auto grid max-w-[430px] grid-cols-5 border-[#942929]">
-            {NAV.map((n) => {
-              const active =
-                path.startsWith(n.to) || ("also" in n && n.also.some((a) => path.startsWith(a)));
-              return "center" in n ? (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  aria-label="Clicker"
-                  className="game-nav-center flex flex-col items-center justify-end pb-1"
-                >
-                  <span
-                    className={cn(
-                      "game-nav-center-badge -mt-4 flex h-11 w-11 items-center justify-center rounded-xl border border-primary-glow bg-gradient-primary text-primary-foreground shadow-glow ring-4 ring-background",
-                      !active && "opacity-85",
-                    )}
-                  >
-                    <Coins className="h-5 w-5" />
-                  </span>
-                  <span
-                    className={cn(
-                      "mt-0.5 text-[10px]",
-                      active ? "text-primary" : "text-muted-foreground",
-                    )}
-                  >
-                    {n.label}
-                  </span>
-                </Link>
-              ) : (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  data-active={active}
-                  className="game-nav-link flex flex-col items-center gap-0.5 py-1.5 text-[10px] text-muted-foreground"
-                >
-                  <n.icon className="game-icon h-4 w-4" />
-                  {n.label}
-                </Link>
-              );
-            })}
+        <nav className="game-nav fixed inset-x-0 bottom-0 z-30" aria-label="Primary navigation">
+          <div className="game-nav-inner mx-auto grid max-w-[430px] grid-cols-4">
+            <Link
+              to="/home"
+              data-active={path.startsWith("/home")}
+              aria-current={path.startsWith("/home") ? "page" : undefined}
+              className="game-nav-link"
+            >
+              <Home className="game-icon" />
+              <span>Home</span>
+            </Link>
+            <Link
+              to="/markets"
+              data-active={path.startsWith("/markets")}
+              aria-current={path.startsWith("/markets") ? "page" : undefined}
+              className="game-nav-link"
+            >
+              <LineChart className="game-icon" />
+              <span>Market</span>
+            </Link>
+            <button
+              type="button"
+              data-active={bankingOpen}
+              aria-label="Open Banking HUB"
+              className="game-nav-link game-nav-button"
+              onClick={() => setBankingOpen(true)}
+            >
+              <Landmark className="game-icon" />
+              <span>Bank</span>
+            </button>
+            <Link
+              to="/profile"
+              data-active={path.startsWith("/profile")}
+              aria-current={path.startsWith("/profile") ? "page" : undefined}
+              className="game-nav-link"
+            >
+              <User className="game-icon" />
+              <span>Profile</span>
+            </Link>
           </div>
         </nav>
 

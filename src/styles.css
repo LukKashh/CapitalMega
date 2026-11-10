@@ -1845,3 +1845,311 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+
+/* -------------------------------------------------------------------------
+   Capital Fortune — portrait-first mobile UI implementation
+   Reference: Capital Fortune UI Spec + UI System mobile layouts.
+   Gameplay, economy, server actions and texture source files are untouched.
+   ------------------------------------------------------------------------- */
+.game-shell {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: hidden;
+  background-color: #0b0b12;
+}
+
+.game-topbar {
+  position: relative;
+  z-index: 25;
+  width: 100%;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(11, 11, 18, 0.94);
+  backdrop-filter: blur(18px);
+  padding-top: env(safe-area-inset-top);
+}
+
+.game-topbar-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 430px;
+  min-height: 58px;
+  margin: 0 auto;
+  padding: 7px 16px;
+}
+
+.game-topbar-brand {
+  overflow: hidden;
+  color: #f3f4f6;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-topbar-brand span {
+  margin-left: 3px;
+  color: var(--primary-glow);
+}
+
+.game-topbar-meta {
+  overflow: hidden;
+  margin-top: 3px;
+  color: #8f91a5;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.game-topbar-cash {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.game-topbar-cash > span {
+  color: #8f91a5;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.game-topbar-cash > strong {
+  max-width: 132px;
+  overflow: hidden;
+  color: #31c48d;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-topbar-menu {
+  width: 44px !important;
+  height: 44px !important;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: 14px;
+  background: rgba(31, 31, 46, 0.72);
+  color: #d8c9ff;
+}
+
+.game-content {
+  width: 100%;
+  max-width: 430px;
+  min-width: 0;
+  padding-right: 16px;
+  padding-left: 16px;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.game-content::-webkit-scrollbar {
+  display: none;
+}
+
+.game-content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.game-nav {
+  border-top: 1px solid rgba(167, 139, 250, 0.22);
+  background: rgba(15, 17, 29, 0.97);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(18px);
+}
+
+.game-nav-inner {
+  display: grid;
+  width: 100%;
+  max-width: 430px;
+  min-height: 66px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0 auto;
+  padding: 6px 12px 5px;
+}
+
+.game-nav-link,
+.game-nav-button {
+  display: flex;
+  min-width: 0;
+  min-height: 52px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 6px 3px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: #9ca3af;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.game-nav-link .game-icon,
+.game-nav-button .game-icon {
+  width: 19px;
+  height: 19px;
+  color: #a78bfa;
+  filter: none;
+}
+
+.game-nav-link[data-active="true"],
+.game-nav-button[data-active="true"] {
+  border-color: rgba(167, 139, 250, 0.34);
+  background: rgba(139, 92, 246, 0.15);
+  color: #f5f0ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.game-nav-link[data-active="true"] .game-icon,
+.game-nav-button[data-active="true"] .game-icon {
+  color: #d7aa54;
+}
+
+.game-panel,
+.game-stat {
+  overflow: hidden;
+  border: 1px solid rgba(167, 139, 250, 0.19);
+  border-radius: 18px;
+  background: linear-gradient(155deg, rgba(31, 31, 46, 0.96), rgba(17, 20, 32, 0.98));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(12px);
+}
+
+.game-stat {
+  min-height: 82px;
+  padding: 13px;
+}
+
+.game-page-header {
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.game-page-title {
+  color: #f5f3ff;
+  font-size: 21px;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.game-page-subtitle {
+  max-width: 34rem;
+  color: #a1a1b2;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.game-content :is(input, select, textarea) {
+  min-height: 44px;
+  border-radius: 12px;
+  border-color: rgba(167, 139, 250, 0.24);
+  background-color: rgba(18, 20, 32, 0.92);
+}
+
+.game-content button:not(.game-nav-button) {
+  touch-action: manipulation;
+}
+
+.game-content :is(button, [role="button"], a) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game-content :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.8);
+  outline-offset: 2px;
+}
+
+.tapper-scene {
+  gap: 10px;
+}
+
+.home-clicker-frame {
+  border-color: rgba(167, 139, 250, 0.34);
+  border-radius: 26px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.home-profile-card {
+  border-radius: 16px;
+}
+
+.banking-hub {
+  background:
+    radial-gradient(100% 45% at 50% 0%, rgba(139, 92, 246, 0.13), transparent 75%),
+    #0b0b12;
+}
+
+.banking-hub > header {
+  min-height: 64px;
+  border-bottom-color: rgba(167, 139, 250, 0.2);
+  background: rgba(15, 17, 29, 0.76);
+}
+
+.banking-hub button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 360px) {
+  .game-topbar-inner {
+    grid-template-columns: minmax(0, 1fr) auto 42px;
+    gap: 7px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .game-topbar-cash > strong {
+    max-width: 108px;
+    font-size: 12px;
+  }
+
+  .game-content {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .game-nav-inner {
+    gap: 2px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .game-nav-link,
+  .game-nav-button {
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-nav-link,
+  .game-nav-button {
+    transition: none;
+  }
+}
