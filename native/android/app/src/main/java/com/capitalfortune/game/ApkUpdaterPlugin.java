@@ -90,6 +90,15 @@ public class ApkUpdaterPlugin extends Plugin {
   }
 
   @PluginMethod
+  public void getUpdateStatus(PluginCall call) {
+    boolean ready = getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_READY, false)
+      && getApkFile().isFile();
+    JSObject result = new JSObject();
+    result.put("ready", ready);
+    call.resolve(result);
+  }
+
+  @PluginMethod
   public void installVerifiedApk(PluginCall call) {
     File apk = getApkFile();
     boolean ready = getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_READY, false);
