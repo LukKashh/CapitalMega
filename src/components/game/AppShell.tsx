@@ -8,7 +8,6 @@ import {
   Dices,
   Briefcase,
   Building2,
-  Coins,
   FlaskConical,
   Maximize,
   Minimize,
@@ -44,17 +43,10 @@ import { OfflineReportDialog } from "./OfflineReport";
 import { checkDeveloperAccess, DeveloperToolsDialog } from "./DeveloperTools";
 import { money } from "@/lib/format";
 
-const NAV = [
-  { to: "/home", label: "Home", icon: Home },
-  { to: "/markets", label: "Market", icon: LineChart },
-  { to: "/profile", label: "Profile", icon: User },
-] as const;
-
 const MORE = [
   { to: "/empire", label: "Business Empire", icon: Building2 },
   { to: "/realestate", label: "Real Estate", icon: Gem },
   { to: "/collectibles", label: "Collectibles", icon: Briefcase },
-  { to: "/corporation", label: "Corporations", icon: Users },
   { to: "/leaderboard", label: "Leaderboards", icon: Trophy },
   { to: "/casino", label: "Casino", icon: Dices },
   { to: "/research", label: "Research & Development", icon: FlaskConical },

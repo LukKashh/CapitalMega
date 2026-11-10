@@ -24,7 +24,7 @@ export function PersonalBalanceBadge({ className, compact = false }: PersonalBal
   return (
     <div
       className={cn(
-        "game-panel inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-card/90 px-2.5 py-1 backdrop-blur-md shadow-xs shrink-0 w-[125px] sm:w-[155px] overflow-hidden justify-between",
+        "personal-balance-badge game-panel inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-card/90 px-2.5 py-1 backdrop-blur-md shadow-xs shrink-0 w-[125px] sm:w-[155px] overflow-hidden justify-between",
         className,
       )}
       title={`Personal Balance: ${money(cash)}`}

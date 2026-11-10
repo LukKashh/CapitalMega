@@ -2153,3 +2153,14 @@ body {
     transition: none;
   }
 }
+
+
+/* The shell HUD is the single source of visible cash context on inner screens. */
+.game-content .personal-balance-badge {
+  display: none;
+}
+
+/* The clicker keeps its own integrated player HUD, with top safe-area clearance. */
+.game-content:has(.tapper-scene) {
+  padding-top: calc(env(safe-area-inset-top) + 12px);
+}
