@@ -15,6 +15,8 @@ import {
   Wifi,
 } from "lucide-react";
 import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
+import { ApkUpdater } from "@/lib/apk-updater";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -24,6 +26,7 @@ import {
 } from "@/lib/game-update";
 
 type LaunchPhase = "idle" | "checking" | "update" | "error";
+type UpdateDownloadPhase = "idle" | "downloading" | "ready" | "permission" | "installing";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,6 +52,7 @@ function LaunchGateway() {
   const [phase, setPhase] = useState<LaunchPhase>("idle");
   const [update, setUpdate] = useState<GameUpdateStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [updateDownloadPhase, setUpdateDownloadPhase] = useState<UpdateDownloadPhase>("idle");
 
   // Reading a persisted login is local session discovery only. It never starts
   // a game session or changes the disconnected launch state.
@@ -58,6 +62,27 @@ function LaunchGateway() {
       setAuthReady(true);
     });
     return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let active = true;
+    let cleanup: Array<() => Promise<void>> = [];
+    void Promise.all([
+      ApkUpdater.addListener("downloadStarted", () => setUpdateDownloadPhase("downloading")),
+      ApkUpdater.addListener("updateReady", () => setUpdateDownloadPhase("ready")),
+      ApkUpdater.addListener("downloadFailed", (event) => {
+        setUpdateDownloadPhase("idle");
+        setErrorMessage(event.message ?? "The APK download or integrity check failed.");
+      }),
+    ]).then((handles) => {
+      if (!active) handles.forEach((handle) => void handle.remove());
+      else cleanup = handles.map((handle) => handle.remove);
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+      cleanup.forEach((remove) => void remove());
+    };
   }, []);
 
   async function connect() {
@@ -190,11 +215,20 @@ function LaunchGateway() {
                   v{update.currentVersion} → v{update.latestVersion}
                 </p>
                 {update.releaseNotes && <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{update.releaseNotes}</p>}
-                <button type="button" onClick={() => void openUpdateDownload()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-bold text-amber-100 transition hover:bg-amber-300/20">
-                  Download latest APK <ArrowRight className="h-3.5 w-3.5" />
-                </button>
+                {updateDownloadPhase === "ready" || updateDownloadPhase === "permission" ? (
+                  <button type="button" onClick={() => void installDownloadedUpdate()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-emerald-300/40 bg-emerald-300/10 px-3 text-xs font-bold text-emerald-100 transition hover:bg-emerald-300/20">
+                    {updateDownloadPhase === "permission" ? "Continue installation" : "Install verified update"} <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <button type="button" disabled={updateDownloadPhase === "downloading" || updateDownloadPhase === "installing"} onClick={() => void startUpdateDownload()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-bold text-amber-100 transition hover:bg-amber-300/20 disabled:opacity-60">
+                    {updateDownloadPhase === "downloading" ? "Downloading and verifying…" : updateDownloadPhase === "installing" ? "Opening installer…" : "Download latest APK"} <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {updateDownloadPhase === "downloading" && <p className="mt-2 text-[10px] text-slate-300">Android is downloading the APK. The checksum will be verified before installation is enabled.</p>}
+                {updateDownloadPhase === "permission" && <p className="mt-2 text-[10px] text-slate-300">Allow Capital Fortune to install unknown apps in Android settings, return here, then continue installation.</p>}
+                {errorMessage && <p className="mt-2 text-[10px] text-rose-300" role="alert">{errorMessage}</p>}
                 <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
-                  Install the downloaded APK, reopen Capitalfortune, then press Connect again. Android will ask you to approve installation.
+                  The verified APK is handed to Android Package Installer. You must approve installation; after updating, reopen Capitalfortune and press Connect again.
                 </p>
               </div>
             </div>
