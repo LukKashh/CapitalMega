@@ -48,7 +48,7 @@ function AuthPage() {
   useEffect(() => {
     let active = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) navigate({ to: "/home", replace: true });
+      if (active && data.session) navigate({ to: "/", replace: true });
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) navigate({ to: "/home", replace: true });
