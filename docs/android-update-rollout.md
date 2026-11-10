@@ -22,7 +22,13 @@ Fields:
 - `releaseNotes`: player-facing update notes.
 - `mandatory`: retained for manifest compatibility. The client currently requires every newer version, regardless of this flag.
 
-When `apkUrl` is configured, the Connect gateway opens that APK URL in Android's browser/download handler. When it is absent, the gateway opens `releaseUrl`. Android still requires the user to approve installation. After installation, reopen the app and press Connect again.
+On Android, when both `apkUrl` and `apkSha256` are configured, the Connect gateway downloads the APK using Android DownloadManager, verifies the SHA-256 digest, and enables the in-app **Install verified update** action. The native bridge hands the verified file to Android Package Installer. If permission to install unknown apps is not enabled, Android settings are opened first; return to the app and continue installation. Android always requires the user to approve the installation. After installation, reopen the app and press Connect again. If either direct APK field is absent, the client falls back to the release page. Web builds continue to use the release destination.
+
+## Native updater implementation
+
+The Android CI job copies the native `ApkUpdaterPlugin` and `ApkDownloadReceiver` sources into the generated Capacitor project. The bridge uses Android DownloadManager, verifies the downloaded file against the manifest SHA-256 before marking it installable, persists verification state across backgrounding, and shares the file with Android Package Installer through FileProvider. It does not bypass Android installation consent.
+
+The native download path is only activated when a newer manifest entry has both a direct `apkUrl` and a matching `apkSha256`. The current manifest has neither field, so no update is currently advertised and a future update without those fields will use the release-page fallback. Web builds continue to use the release destination.
 
 ## Current implementation boundary
 
@@ -30,7 +36,7 @@ The version check is a public, read-only bootstrap request to the branch's raw G
 
 This source update does not deploy a new Supabase Edge Function, alter the production database, or add a server-side version rejection check to existing gameplay endpoints. The UI gate is therefore a client launch gate, not a tamper-proof server enforcement boundary. Server-side enforcement requires a separately deployed bootstrap/version policy and corresponding checks in authenticated gameplay endpoints.
 
-The current manifest does not yet contain `apkUrl`; until a real signed APK release asset exists and its exact URL is added, the update action falls back to the GitHub release page. This branch currently builds a debug APK; it is not a signed production release.
+The current manifest does not yet contain `apkUrl` or `apkSha256`; until a real APK release asset exists and its exact URL and checksum are added, the native download flow cannot activate. This branch currently builds a debug APK signed with the runner-generated debug key; it is not a signed production release. The earlier APK was also built with an ephemeral runner key, so the first installation of this updater build may require uninstalling the previous debug build and installing this one. A stable private release keystore must be configured as GitHub Actions secrets before release builds can update existing installations in place. Do not commit a private signing key to the repository.
 
 ## Publishing a release
 
