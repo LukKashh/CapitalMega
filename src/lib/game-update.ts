@@ -2,6 +2,8 @@ export type GameUpdateManifest = {
   latestVersion: string;
   minimumSupportedVersion: string;
   releaseUrl: string;
+  /** Direct HTTPS APK asset URL. When absent, the release page is opened. */
+  apkUrl?: string;
   releaseNotes: string;
   mandatory: boolean;
 };
@@ -13,6 +15,7 @@ export type GameUpdateStatus = {
   updateAvailable: boolean;
   updateRequired: boolean;
   releaseUrl: string;
+  downloadUrl: string;
   releaseNotes: string;
 };
 
@@ -38,6 +41,15 @@ export function compareVersions(left: string, right: string): number {
   return 0;
 }
 
+function isHttpsUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function isValidManifest(value: unknown): value is GameUpdateManifest {
   if (!value || typeof value !== "object") return false;
   const manifest = value as Record<string, unknown>;
@@ -46,13 +58,18 @@ function isValidManifest(value: unknown): value is GameUpdateManifest {
     versionParts(manifest.latestVersion) !== null &&
     typeof manifest.minimumSupportedVersion === "string" &&
     versionParts(manifest.minimumSupportedVersion) !== null &&
-    typeof manifest.releaseUrl === "string" &&
-    manifest.releaseUrl.startsWith("https://") &&
+    isHttpsUrl(manifest.releaseUrl) &&
+    (manifest.apkUrl === undefined || isHttpsUrl(manifest.apkUrl)) &&
     typeof manifest.releaseNotes === "string" &&
     typeof manifest.mandatory === "boolean"
   );
 }
 
+/**
+ * Public bootstrap version check. This intentionally runs before Supabase
+ * authentication or any game-session request. Every newer build is required
+ * before the client is allowed to proceed to authentication/gameplay.
+ */
 export async function checkForGameUpdate(
   fetcher: typeof fetch = fetch,
   currentVersion = CURRENT_APP_VERSION,
@@ -71,17 +88,16 @@ export async function checkForGameUpdate(
   }
 
   const updateAvailable = compareVersions(payload.latestVersion, currentVersion) > 0;
-  const updateRequired =
-    updateAvailable &&
-    (payload.mandatory || compareVersions(payload.minimumSupportedVersion, currentVersion) > 0);
 
   return {
     currentVersion,
     latestVersion: payload.latestVersion,
     minimumSupportedVersion: payload.minimumSupportedVersion,
     updateAvailable,
-    updateRequired,
+    // Capital Fortune requires the newest published client before connecting.
+    updateRequired: updateAvailable,
     releaseUrl: payload.releaseUrl,
+    downloadUrl: payload.apkUrl ?? payload.releaseUrl,
     releaseNotes: payload.releaseNotes,
   };
 }
