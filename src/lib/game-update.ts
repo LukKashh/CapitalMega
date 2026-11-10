@@ -21,7 +21,7 @@ export const UPDATE_MANIFEST_URL =
   "https://raw.githubusercontent.com/LukKashh/CapitalMega/remix/supabase-android-independent/public/update-manifest.json";
 
 function versionParts(version: string): number[] | null {
-  if (!/^\\d+(?:\\.\\d+){1,3}$/.test(version)) return null;
+  if (!/^\d+(?:\.\d+){1,3}$/.test(version)) return null;
   return version.split(".").map((part) => Number.parseInt(part, 10));
 }
 
