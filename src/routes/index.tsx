@@ -75,7 +75,7 @@ function LaunchGateway() {
       if (result.updateAvailable) {
         setUpdate(result);
         setPhase("update");
-        if (result.updateRequired) return;
+        return;
       }
       navigate({ to: "/home" });
     } catch (error) {
