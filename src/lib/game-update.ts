@@ -2,8 +2,10 @@ export type GameUpdateManifest = {
   latestVersion: string;
   minimumSupportedVersion: string;
   releaseUrl: string;
-  /** Direct HTTPS APK asset URL. When absent, the release page is opened. */
+  /** Direct HTTPS APK asset URL. */
   apkUrl?: string;
+  /** SHA-256 of the exact APK bytes published at apkUrl. */
+  apkSha256?: string;
   releaseNotes: string;
   mandatory: boolean;
 };
@@ -16,6 +18,8 @@ export type GameUpdateStatus = {
   updateRequired: boolean;
   releaseUrl: string;
   downloadUrl: string;
+  apkUrl?: string;
+  apkSha256?: string;
   releaseNotes: string;
 };
 
@@ -53,13 +57,17 @@ function isHttpsUrl(value: unknown): value is string {
 function isValidManifest(value: unknown): value is GameUpdateManifest {
   if (!value || typeof value !== "object") return false;
   const manifest = value as Record<string, unknown>;
+  const hasApkUrl = manifest.apkUrl !== undefined;
   return (
     typeof manifest.latestVersion === "string" &&
     versionParts(manifest.latestVersion) !== null &&
     typeof manifest.minimumSupportedVersion === "string" &&
     versionParts(manifest.minimumSupportedVersion) !== null &&
     isHttpsUrl(manifest.releaseUrl) &&
-    (manifest.apkUrl === undefined || isHttpsUrl(manifest.apkUrl)) &&
+    (!hasApkUrl || isHttpsUrl(manifest.apkUrl)) &&
+    (!hasApkUrl ||
+      (typeof manifest.apkSha256 === "string" && /^[a-f0-9]{64}$/i.test(manifest.apkSha256))) &&
+    (manifest.apkSha256 === undefined || (typeof manifest.apkSha256 === "string" && /^[a-f0-9]{64}$/i.test(manifest.apkSha256))) &&
     typeof manifest.releaseNotes === "string" &&
     typeof manifest.mandatory === "boolean"
   );
@@ -94,10 +102,11 @@ export async function checkForGameUpdate(
     latestVersion: payload.latestVersion,
     minimumSupportedVersion: payload.minimumSupportedVersion,
     updateAvailable,
-    // Capital Fortune requires the newest published client before connecting.
     updateRequired: updateAvailable,
     releaseUrl: payload.releaseUrl,
     downloadUrl: payload.apkUrl ?? payload.releaseUrl,
+    apkUrl: payload.apkUrl,
+    apkSha256: payload.apkSha256,
     releaseNotes: payload.releaseNotes,
   };
 }
