@@ -71,6 +71,8 @@ jobs:
         run: pnpm exec cap add android
       - name: Sync Capacitor
         run: pnpm exec cap sync android
+      - name: Install native APK updater
+        run: node scripts/prepare-android-updater.mjs
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug
       - name: Upload Android APK
