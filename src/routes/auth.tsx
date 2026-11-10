@@ -51,7 +51,7 @@ function AuthPage() {
       if (active && data.session) navigate({ to: "/", replace: true });
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate({ to: "/home", replace: true });
+      if (session) navigate({ to: "/", replace: true });
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [navigate]);
@@ -65,7 +65,7 @@ function AuthPage() {
         if (error) throw error;
         if (data.session) {
           toast.success("Account created successfully!");
-          navigate({ to: "/home", replace: true });
+          navigate({ to: "/", replace: true });
         } else {
           setMode("signin");
           toast.success("Check your email and confirm your address before signing in.");
@@ -75,7 +75,7 @@ function AuthPage() {
         if (error) throw error;
         if (!data.session) throw new Error("Email confirmation is required. Check your inbox.");
         toast.success("Signed in successfully!");
-        navigate({ to: "/home", replace: true });
+        navigate({ to: "/", replace: true });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
