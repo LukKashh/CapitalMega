@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
       { title: "Capital Fortune — Build Wealth From $0" },
       {
         name: "description",
-        content: "Your empire awaits. Check for updates and connect to your saved Capital Fortune profile.",
+        content: "Your empire awaits. Check the client version and connect to Capital Fortune.",
       },
       { property: "og:title", content: "Capital Fortune — Build Wealth From $0" },
       { property: "og:description", content: "Build, invest and rise in Capital Fortune." },
@@ -51,8 +51,8 @@ function LaunchGateway() {
   const [update, setUpdate] = useState<GameUpdateStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // INITIAL_SESSION reads the persisted Supabase session. It does not enter the
-  // game or request the player's cloud save; that happens only after the button.
+  // Reading a persisted login is local session discovery only. It never starts
+  // a game session or changes the disconnected launch state.
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
@@ -61,32 +61,36 @@ function LaunchGateway() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  async function enterFortune() {
-    if (!session) {
-      navigate({ to: "/auth", search: { mode: "signin" } });
-      return;
-    }
-
+  async function connect() {
     setPhase("checking");
     setErrorMessage("");
     setUpdate(null);
+
     try {
+      // Public version bootstrap is deliberately first: no auth or game-save
+      // request is made until the installed APK passes this check.
       const result = await checkForGameUpdate();
-      if (result.updateAvailable) {
+      if (result.updateRequired) {
         setUpdate(result);
         setPhase("update");
         return;
       }
+
+      if (!session) {
+        navigate({ to: "/auth", search: { mode: "signin" } });
+        return;
+      }
+
       navigate({ to: "/home" });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Update verification failed.");
+      setErrorMessage(error instanceof Error ? error.message : "Connection verification failed.");
       setPhase("error");
     }
   }
 
-  async function openReleasePage() {
+  async function openUpdateDownload() {
     if (!update) return;
-    await Browser.open({ url: update.releaseUrl, presentationStyle: "popover" });
+    await Browser.open({ url: update.downloadUrl, presentationStyle: "popover" });
   }
 
   async function signOut() {
@@ -142,8 +146,8 @@ function LaunchGateway() {
                 {session ? "Welcome back, Tycoon" : "Your next chapter awaits"}
               </h2>
             </div>
-            <span className={`launch-status-seal ${session ? "is-online" : "is-guest"}`}>
-              {session ? <BadgeCheck className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+            <span className="launch-status-seal is-guest" aria-label="Disconnected">
+              <Wifi className="h-5 w-5" />
             </span>
           </div>
 
@@ -154,18 +158,18 @@ function LaunchGateway() {
                 {session?.user.email ?? (authReady ? "No saved profile" : "Checking saved profile…")}
               </p>
               <p className="mt-0.5 text-[11px] text-slate-400">
-                {session ? "Saved login detected · Cloud progress protected" : "Sign in to access your cloud save"}
+                {session ? "Saved login detected · Not connected to game servers" : "Sign in after the client passes version verification"}
               </p>
             </div>
-            {session && <span className="launch-live-dot" />}
+            <span className="text-[9px] font-bold tracking-wider text-amber-300">DISCONNECTED</span>
           </div>
 
           {phase === "checking" && (
             <div className="launch-progress-panel" role="status" aria-live="polite">
               <RefreshCw className="h-4 w-4 animate-spin text-violet-300" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white">Verifying game release</p>
-                <p className="text-[10px] text-slate-400">Checking version before connecting to your save…</p>
+                <p className="text-xs font-semibold text-white">Verifying client release</p>
+                <p className="text-[10px] text-slate-400">Checking the latest build before authentication…</p>
               </div>
               <span className="launch-progress-shimmer" />
             </div>
@@ -182,14 +186,17 @@ function LaunchGateway() {
             <div className={`launch-message launch-update ${mandatoryUpdate ? "is-required" : ""}`} role="status">
               <Download className="h-5 w-5 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold">{mandatoryUpdate ? "Update required" : "A new version is available"}</p>
+                <p className="text-sm font-bold">Client update required</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
                   v{update.currentVersion} → v{update.latestVersion}
                 </p>
                 {update.releaseNotes && <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{update.releaseNotes}</p>}
-                <button type="button" onClick={() => void openReleasePage()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-bold text-amber-100 transition hover:bg-amber-300/20">
-                  Open official update page <ArrowRight className="h-3.5 w-3.5" />
+                <button type="button" onClick={() => void openUpdateDownload()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-bold text-amber-100 transition hover:bg-amber-300/20">
+                  Download latest APK <ArrowRight className="h-3.5 w-3.5" />
                 </button>
+                <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+                  Install the downloaded APK, reopen Capitalfortune, then press Connect again. Android will ask you to approve installation.
+                </p>
               </div>
             </div>
           )}
@@ -197,25 +204,19 @@ function LaunchGateway() {
           {phase !== "checking" && phase !== "update" && (
             <Button
               type="button"
-              disabled={!authReady || (phase === "update" && mandatoryUpdate)}
-              onClick={() => void enterFortune()}
+              disabled={!authReady}
+              onClick={() => void connect()}
               className="launch-enter-button mt-5 h-14 w-full rounded-xl text-sm font-extrabold tracking-[.14em] text-white"
             >
-              {phase === "error" ? "RETRY VERSION CHECK" : session ? "ENTER FORTUNE" : "SIGN IN TO CONTINUE"}
+              {phase === "error" ? "RETRY CONNECTION CHECK" : "CONNECT"}
               {phase === "error" ? <RefreshCw className="ml-2 h-4 w-4" /> : <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
           )}
 
-          {phase === "update" && update && !mandatoryUpdate && (
-            <button type="button" onClick={() => navigate({ to: "/home" })} className="mt-3 min-h-11 w-full rounded-xl text-xs font-semibold text-slate-400 transition hover:text-white">
-              Continue with current version
-            </button>
-          )}
-
           {!session && authReady && (
-            <Link to="/auth" search={{ mode: "signup" }} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.035] text-xs font-semibold text-slate-300 transition hover:border-violet-300/30 hover:text-white">
-              Create a new account
-            </Link>
+            <p className="mt-3 text-center text-[10px] leading-relaxed text-slate-500">
+              You can sign in or create an account after pressing Connect and passing the version check.
+            </p>
           )}
 
           {session && (
