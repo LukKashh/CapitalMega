@@ -114,12 +114,12 @@ export function AppShell() {
   return (
     <MenuContext.Provider value={{ openMenu: () => setMenu(true) }}>
       <div className="game-shell h-screen overflow-hidden flex flex-col bg-background text-foreground">
-        <main className="game-content mx-auto w-full max-w-2xl flex-1 overflow-x-hidden overflow-y-auto px-3.5 pb-14 pt-2 flex flex-col min-h-0">
+        <main className="game-content mx-auto w-full max-w-[430px] flex-1 overflow-x-hidden overflow-y-auto px-3.5 pb-14 pt-2 flex flex-col min-h-0">
           <Outlet />
         </main>
 
         <nav className="game-nav fixed inset-x-0 bottom-0 z-30 border-t border-[#942929] bg-background/95 backdrop-blur pb-safe">
-          <div className="game-nav-inner mx-auto grid max-w-2xl grid-cols-5 border-[#942929]">
+          <div className="game-nav-inner mx-auto grid max-w-[430px] grid-cols-5 border-[#942929]">
             {NAV.map((n) => {
               const active =
                 path.startsWith(n.to) || ("also" in n && n.also.some((a) => path.startsWith(a)));
