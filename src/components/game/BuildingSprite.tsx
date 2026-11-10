@@ -35,7 +35,7 @@ export function BuildingSprite({
   businessDefId,
   propertyCategory,
   propertyName,
-  fit = "cover",
+  fit = "contain",
   fallbackKey = "office",
   showAssetBadge = false,
   className,
