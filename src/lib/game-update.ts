@@ -71,7 +71,9 @@ export async function checkForGameUpdate(
   }
 
   const updateAvailable = compareVersions(payload.latestVersion, currentVersion) > 0;
-  const updateRequired =\n    updateAvailable &&\n    (payload.mandatory || compareVersions(payload.minimumSupportedVersion, currentVersion) > 0);
+  const updateRequired =
+    updateAvailable &&
+    (payload.mandatory || compareVersions(payload.minimumSupportedVersion, currentVersion) > 0);
 
   return {
     currentVersion,
