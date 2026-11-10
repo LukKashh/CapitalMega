@@ -1811,3 +1811,37 @@ body {
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.42);
   }
 }
+
+
+/* Original art and texture handling: fit complete assets without distortion. */
+.game-content .game-art {
+  object-fit: contain;
+  object-position: center;
+  background-color: rgba(21, 21, 34, 0.34);
+  border-radius: 0.75rem;
+}
+
+.game-content .game-art[width],
+.game-content .game-art[height] {
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  .banking-view > .grid > nav[aria-label="Banking sections"] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+  }
+}
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .banking-view > .grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .banking-view > .grid > nav[aria-label="Banking sections"] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
