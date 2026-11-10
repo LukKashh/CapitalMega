@@ -4,6 +4,8 @@ import { dirname, resolve } from "node:path";
 const root = process.cwd();
 const javaSource = resolve(root, "native/android/app/src/main/java/com/capitalfortune/game/ApkUpdaterPlugin.java");
 const javaTarget = resolve(root, "android/app/src/main/java/com/capitalfortune/game/ApkUpdaterPlugin.java");
+const receiverSource = resolve(root, "native/android/app/src/main/java/com/capitalfortune/game/ApkDownloadReceiver.java");
+const receiverTarget = resolve(root, "android/app/src/main/java/com/capitalfortune/game/ApkDownloadReceiver.java");
 const pathsSource = resolve(root, "native/android/app/src/main/res/xml/capitalfortune_file_paths.xml");
 const pathsTarget = resolve(root, "android/app/src/main/res/xml/capitalfortune_file_paths.xml");
 const activityPath = resolve(root, "android/app/src/main/java/com/capitalfortune/game/MainActivity.java");
@@ -12,6 +14,7 @@ const manifestPath = resolve(root, "android/app/src/main/AndroidManifest.xml");
 await mkdir(dirname(javaTarget), { recursive: true });
 await mkdir(dirname(pathsTarget), { recursive: true });
 await copyFile(javaSource, javaTarget);
+await copyFile(receiverSource, receiverTarget);
 await copyFile(pathsSource, pathsTarget);
 
 let activity = await readFile(activityPath, "utf8");
@@ -27,6 +30,9 @@ await writeFile(activityPath, activity);
 let manifest = await readFile(manifestPath, "utf8");
 if (!manifest.includes("REQUEST_INSTALL_PACKAGES")) {
   manifest = manifest.replace("<application", '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n\n    <application');
+}
+if (!manifest.includes("ApkDownloadReceiver")) {
+  manifest = manifest.replace("</application>", `<receiver android:name=".ApkDownloadReceiver" android:exported="false">\n            <intent-filter>\n                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />\n            </intent-filter>\n        </receiver>\n    </application>`);
 }
 if (!manifest.includes('android:name="androidx.core.content.FileProvider"')) {
   manifest = manifest.replace(
