@@ -85,6 +85,17 @@ function LaunchGateway() {
     };
   }, []);
 
+  useEffect(() => {
+    if (phase !== "update" || !Capacitor.isNativePlatform()) return;
+    let active = true;
+    void ApkUpdater.getUpdateStatus()
+      .then(({ ready }) => {
+        if (active && ready) setUpdateDownloadPhase("ready");
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [phase, update?.latestVersion]);
+
   async function connect() {
     setPhase("checking");
     setErrorMessage("");
