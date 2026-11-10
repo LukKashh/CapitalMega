@@ -1,144 +1,241 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import {
   ArrowRight,
+  BadgeCheck,
   Building2,
-  ChartNoAxesCombined,
+  CheckCircle2,
+  Cloud,
+  Crown,
+  Download,
+  LogOut,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
-  TrendingUp,
-  Users,
+  Wifi,
 } from "lucide-react";
-import { art } from "@/components/game/art";
+import { Browser } from "@capacitor/browser";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  checkForGameUpdate,
+  CURRENT_APP_VERSION,
+  type GameUpdateStatus,
+} from "@/lib/game-update";
+
+type LaunchPhase = "idle" | "checking" | "update" | "error";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Capitalfortune — Build Wealth From $0" },
+      { title: "Capital Fortune — Build Wealth From $0" },
       {
         name: "description",
-        content:
-          "Start with nothing. Tap, acquire companies, trade stocks and crypto, collect rent and luxury assets, and build a corporation with friends.",
+        content: "Your empire awaits. Check for updates and connect to your saved Capital Fortune profile.",
       },
-      { property: "og:title", content: "Capitalfortune — Build Wealth From $0" },
-      {
-        property: "og:description",
-        content:
-          "A mobile-first wealth and business tycoon game with cloud saves and cooperative corporations.",
-      },
+      { property: "og:title", content: "Capital Fortune — Build Wealth From $0" },
+      { property: "og:description", content: "Build, invest and rise in Capital Fortune." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Landing,
+  component: LaunchGateway,
 });
 
-function Landing() {
+function LaunchGateway() {
   const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [phase, setPhase] = useState<LaunchPhase>("idle");
+  const [update, setUpdate] = useState<GameUpdateStatus | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // INITIAL_SESSION reads the persisted Supabase session. It does not enter the
+  // game or request the player's cloud save; that happens only after the button.
   useEffect(() => {
-    let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) navigate({ to: "/home", replace: true });
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate({ to: "/home", replace: true });
-    });
-    return () => { active = false; listener.subscription.unsubscribe(); };
-  }, [navigate]);
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  async function enterFortune() {
+    if (!session) {
+      navigate({ to: "/auth", search: { mode: "signin" } });
+      return;
+    }
+
+    setPhase("checking");
+    setErrorMessage("");
+    setUpdate(null);
+    try {
+      const result = await checkForGameUpdate();
+      if (result.updateAvailable) {
+        setUpdate(result);
+        setPhase("update");
+        if (result.updateRequired) return;
+      }
+      navigate({ to: "/home" });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Update verification failed.");
+      setPhase("error");
+    }
+  }
+
+  async function openReleasePage() {
+    if (!update) return;
+    await Browser.open({ url: update.releaseUrl, presentationStyle: "popover" });
+  }
+
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setErrorMessage("Couldn't sign out. Please try again.");
+      return;
+    }
+    setPhase("idle");
+    setUpdate(null);
+    setErrorMessage("");
+  }
+
+  const mandatoryUpdate = Boolean(update?.updateRequired);
 
   return (
-    <main className="entry-screen relative flex min-h-[100svh] flex-col overflow-hidden text-white">
-      <img src={art("entry-city")} alt="" aria-hidden="true" className="entry-backdrop" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,17,.55)_0%,rgba(5,8,17,.78)_48%,#070b14_100%)]" />
-      <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-violet-600/20 blur-[100px]" />
-      <div className="absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-cyan-500/15 blur-[100px]" />
+    <main className="launch-gateway relative flex min-h-[100svh] flex-col overflow-hidden px-5 pb-safe pt-safe text-white">
+      <div className="launch-gateway-sky" aria-hidden="true" />
+      <div className="launch-gateway-vignette" aria-hidden="true" />
+      <div className="launch-gateway-particles" aria-hidden="true" />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 text-violet-200">
-            <TrendingUp className="h-5 w-5" />
-          </span>
-          <span className="brand-name text-lg">
-            Capital<span>fortune</span>
-          </span>
-        </Link>
-        <Link
-          to="/auth"
-          search={{ mode: "signin" }}
-          className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-medium text-slate-200 backdrop-blur transition hover:bg-white/10"
-        >
-          Sign in
-        </Link>
+      <header className="relative z-10 mx-auto flex w-full max-w-xl items-center justify-between pt-5">
+        <div className="flex items-center gap-2.5">
+          <span className="launch-crest"><Crown className="h-5 w-5" /></span>
+          <span className="brand-name text-lg tracking-tight">Capital<span>fortune</span></span>
+        </div>
+        <span className="launch-build-tag">CLIENT v{CURRENT_APP_VERSION}</span>
       </header>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-5 pb-12 pt-10 sm:px-8 lg:px-10 lg:pb-20">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[.16em] text-violet-100 backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5" /> Wealth Builder Tycoon
+      <section className="relative z-10 mx-auto flex w-full max-w-xl flex-1 flex-col justify-center py-8">
+        <div className="launch-city-panel">
+          <div className="launch-city-halo" />
+          <div className="launch-city-grid" />
+          <div className="launch-city-skyline" aria-hidden="true">
+            <span /><span /><span /><span /><span /><span /><span /><span /><span />
           </div>
-          <h1 className="mt-6 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-            Start with nothing.
-            <span className="mt-2 block bg-gradient-to-r from-violet-300 via-fuchsia-200 to-cyan-200 bg-clip-text text-transparent">
-              Build something extraordinary.
-            </span>
-          </h1>
-          <p className="mt-6 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
-            Shape your financial future, grow your business empire, and build your own path to
-            wealth in Capitalfortune.
-          </p>
-          <div className="mt-8 flex w-full max-w-md flex-col gap-3 sm:flex-row">
-            <Button
-              asChild
-              size="lg"
-              className="h-12 flex-1 gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-500 font-semibold shadow-lg shadow-violet-950/40 hover:brightness-110"
-            >
-              <Link to="/auth" search={{ mode: "signup" }}>
-                Create your account <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="h-12 flex-1 rounded-xl border-white/20 bg-white/[0.06] text-white backdrop-blur hover:bg-white/10 hover:text-white"
-            >
-              <Link to="/auth" search={{ mode: "signin" }}>
-                Continue your empire
-              </Link>
-            </Button>
+          <div className="launch-city-emblem">
+            <div className="launch-emblem-ring"><Crown className="h-10 w-10" /></div>
+          </div>
+          <div className="relative z-10 px-4 pb-5 text-center">
+            <p className="launch-kicker"><Sparkles className="h-3.5 w-3.5" /> BUILD · INVEST · RISE</p>
+            <h1 className="launch-title">CAPITAL<br /><span>FORTUNE</span></h1>
+            <p className="launch-subtitle">Your empire is waiting.</p>
           </div>
         </div>
 
-        <div className="mt-12 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 backdrop-blur-xl">
-            <Building2 className="h-5 w-5 text-violet-300" />
-            <p className="mt-3 text-sm font-semibold">Build and expand</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Develop your own business empire.
-            </p>
+        <div className="launch-gateway-card">
+          <div className="launch-card-ornament" aria-hidden="true" />
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="launch-section-label">PLAYER ACCESS</p>
+              <h2 className="mt-1 text-lg font-semibold text-white">
+                {session ? "Welcome back, Tycoon" : "Your next chapter awaits"}
+              </h2>
+            </div>
+            <span className={`launch-status-seal ${session ? "is-online" : "is-guest"}`}>
+              {session ? <BadgeCheck className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+            </span>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 backdrop-blur-xl">
-            <ChartNoAxesCombined className="h-5 w-5 text-cyan-300" />
-            <p className="mt-3 text-sm font-semibold">Invest and trade</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Explore markets and grow your assets.
-            </p>
+
+          <div className="launch-profile-row">
+            <div className="launch-profile-icon"><Building2 className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-100">
+                {session?.user.email ?? (authReady ? "No saved profile" : "Checking saved profile…")}
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {session ? "Saved login detected · Cloud progress protected" : "Sign in to access your cloud save"}
+              </p>
+            </div>
+            {session && <span className="launch-live-dot" />}
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 backdrop-blur-xl">
-            <Users className="h-5 w-5 text-fuchsia-300" />
-            <p className="mt-3 text-sm font-semibold">Connect and collaborate</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Build alongside others through corporations.
-            </p>
-          </div>
+
+          {phase === "checking" && (
+            <div className="launch-progress-panel" role="status" aria-live="polite">
+              <RefreshCw className="h-4 w-4 animate-spin text-violet-300" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-white">Verifying game release</p>
+                <p className="text-[10px] text-slate-400">Checking version before connecting to your save…</p>
+              </div>
+              <span className="launch-progress-shimmer" />
+            </div>
+          )}
+
+          {phase === "error" && (
+            <div className="launch-message launch-error" role="alert">
+              <Wifi className="h-4 w-4 shrink-0" />
+              <p>{errorMessage}</p>
+            </div>
+          )}
+
+          {phase === "update" && update && (
+            <div className={`launch-message launch-update ${mandatoryUpdate ? "is-required" : ""}`} role="status">
+              <Download className="h-5 w-5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold">{mandatoryUpdate ? "Update required" : "A new version is available"}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                  v{update.currentVersion} → v{update.latestVersion}
+                </p>
+                {update.releaseNotes && <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{update.releaseNotes}</p>}
+                <button type="button" onClick={() => void openReleasePage()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-bold text-amber-100 transition hover:bg-amber-300/20">
+                  Open official update page <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {phase !== "checking" && (
+            <Button
+              type="button"
+              disabled={!authReady || (phase === "update" && mandatoryUpdate)}
+              onClick={() => void enterFortune()}
+              className="launch-enter-button mt-5 h-14 w-full rounded-xl text-sm font-extrabold tracking-[.14em] text-white"
+            >
+              {phase === "error" ? "RETRY VERSION CHECK" : session ? "ENTER FORTUNE" : "SIGN IN TO CONTINUE"}
+              {phase === "error" ? <RefreshCw className="ml-2 h-4 w-4" /> : <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          )}
+
+          {phase === "update" && update && !mandatoryUpdate && (
+            <button type="button" onClick={() => navigate({ to: "/home" })} className="mt-3 min-h-11 w-full rounded-xl text-xs font-semibold text-slate-400 transition hover:text-white">
+              Continue with current version
+            </button>
+          )}
+
+          {!session && authReady && (
+            <Link to="/auth" search={{ mode: "signup" }} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.035] text-xs font-semibold text-slate-300 transition hover:border-violet-300/30 hover:text-white">
+              Create a new account
+            </Link>
+          )}
+
+          {session && (
+            <button type="button" onClick={() => void signOut()} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 text-xs font-medium text-slate-500 transition hover:text-slate-200">
+              <LogOut className="h-3.5 w-3.5" /> Switch account / Sign out
+            </button>
+          )}
         </div>
-        <div className="mt-7 flex items-center gap-2 text-[11px] text-slate-400">
-          <ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure sign-in · Cloud-saved
-          progression
+
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="launch-feature"><ShieldCheck /><span>SECURE ACCESS</span></div>
+          <div className="launch-feature"><Cloud /><span>CLOUD SAVES</span></div>
+          <div className="launch-feature"><CheckCircle2 /><span>VERSION CHECK</span></div>
         </div>
-      </div>
+      </section>
+
+      <footer className="relative z-10 mx-auto flex w-full max-w-xl items-center justify-between pb-4 text-[9px] tracking-[.14em] text-slate-600">
+        <span>CAPITAL FORTUNE · TYCOON EDITION</span>
+        <span>ALL RIGHTS RESERVED</span>
+      </footer>
     </main>
   );
 }
