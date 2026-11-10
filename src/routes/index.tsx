@@ -194,7 +194,7 @@ function LaunchGateway() {
             </div>
           )}
 
-          {phase !== "checking" && (
+          {phase !== "checking" && phase !== "update" && (
             <Button
               type="button"
               disabled={!authReady || (phase === "update" && mandatoryUpdate)}
